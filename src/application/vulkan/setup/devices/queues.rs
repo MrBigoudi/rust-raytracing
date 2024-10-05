@@ -4,7 +4,7 @@ use log::error;
 use crate::application::{core::error::ErrorCode, vulkan::types::VulkanContext};
 
 #[derive(Debug, Default)]
-pub(crate) struct Queues {
+pub struct Queues {
     pub graphics_family_index: Option<usize>,
     pub graphics_family_queue_count: Option<u32>,
     pub graphics_queue: Option<Queue>,
@@ -23,7 +23,7 @@ pub(crate) struct Queues {
 }
 
 impl VulkanContext<'_> {
-    pub(crate) fn queue_family_properties_create(
+    pub fn queue_family_properties_create(
         &self,
         physical_device: &PhysicalDevice,
     ) -> Result<Queues, ErrorCode> {

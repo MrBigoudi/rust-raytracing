@@ -1,6 +1,6 @@
 use ash::vk::PhysicalDeviceFeatures;
 
-pub(crate) fn physical_device_features_to_vector(
+pub fn physical_device_features_to_vector(
     features: &PhysicalDeviceFeatures,
 ) -> Vec<(String, bool)> {
     vec![

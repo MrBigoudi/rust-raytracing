@@ -8,6 +8,13 @@ impl VulkanContext<'_> {
     pub fn clean(&mut self) -> Result<(), ErrorCode> {
         self.device_wait_idle()?;
 
+        if let Err(err) = self.clean_swpachain() {
+            error!("Failed to shutdown the vulkan swapchain: {:?}", err);
+            return Err(ErrorCode::CleaningFailure);
+        } else {
+            debug!("Vulkan swapchain cleaned successfully !");
+        }
+
         if let Err(err) = self.clean_queues() {
             error!(
                 "Failed to shutdown the vulkan logical device queues: {:?}",

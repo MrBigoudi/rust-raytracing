@@ -5,7 +5,7 @@ use log::error;
 
 use crate::application::{core::error::ErrorCode, vulkan::types::VulkanContext};
 
-pub(crate) struct DeviceRequirements {
+pub struct DeviceRequirements {
     pub does_require_graphics_queue: bool,
     pub does_require_present_queue: bool,
     pub does_require_compute_queue: bool,

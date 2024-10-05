@@ -18,7 +18,7 @@ pub struct Application;
 
 impl Application {
     /// Render
-    fn render(_vulkan_context: &mut VulkanContext, _window: &Window) -> Result<(), ErrorCode> {
+    fn render(vulkan_context: &mut VulkanContext, window: &Window) -> Result<(), ErrorCode> {
         Ok(())
     }
 

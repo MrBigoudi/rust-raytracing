@@ -7,9 +7,10 @@ To run in debug mode:
 RUST_LOG=debug cargo run
 ```
 
-To run in build mode:
+To build and run in release mode:
 ```sh
-cargo run
+cargo build --release
+cargo run --release
 ```
 
 ## Shaders

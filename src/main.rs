@@ -1,13 +1,17 @@
+use std::fs::File;
+
 use application::Application;
-use log::error;
 
 pub mod application;
 
 fn main() {
-    env_logger::init();
+    let target = Box::new(File::create("output.log").expect("Failed to create the log file"));
+    env_logger::Builder::from_default_env()
+        .target(env_logger::Target::Pipe(target))
+        .init();
+
     // run the app
     if let Err(err) = Application::run() {
-        error!("Failed to run the application: {:?}", err);
-        panic!()
+        panic!("Failed to run the application: {:?}", err);
     }
 }

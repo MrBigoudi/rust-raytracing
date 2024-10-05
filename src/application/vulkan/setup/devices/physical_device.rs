@@ -15,7 +15,7 @@ use super::{
 };
 
 #[derive(Default, Debug)]
-pub(crate) struct PhysicalDeviceInfo {
+pub struct PhysicalDeviceInfo {
     pub queues: Queues,
     pub properties: PhysicalDeviceProperties,
     pub features: PhysicalDeviceFeatures,
@@ -275,7 +275,7 @@ impl VulkanContext<'_> {
         }
     }
 
-    pub(crate) fn device_find_memory_index(
+    pub fn device_find_memory_index(
         &self,
         type_filter: u32,
         property_flags: MemoryPropertyFlags,
@@ -297,7 +297,7 @@ impl VulkanContext<'_> {
         Err(ErrorCode::VulkanFailure)
     }
 
-    pub(crate) fn device_detect_depth_format(&mut self) -> Result<(), ErrorCode> {
+    pub fn device_detect_depth_format(&mut self) -> Result<(), ErrorCode> {
         // Format candidates
         let candidates = [
             Format::D32_SFLOAT,

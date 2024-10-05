@@ -81,6 +81,25 @@ impl VulkanContext<'_> {
             debug!("Vulkan logical device queues initialized successfully !");
         }
 
+        if let Err(err) = context.init_framebuffer_dimensions(parameters) {
+            error!(
+                "Failed to initialize the vulkan vulkan framebuffer dimensions: {:?}",
+                err
+            );
+            return Err(ErrorCode::InitializationFailure);
+        } else {
+            debug!("Vulkan framebuffer dimensions initialized successfully: (width={:?}, height={:?})!",
+                context.framebuffer_width, context.framebuffer_height
+            );
+        }
+
+        if let Err(err) = context.init_swapchain() {
+            error!("Failed to initialize the vulkan swapchain: {:?}", err);
+            return Err(ErrorCode::InitializationFailure);
+        } else {
+            debug!("Vulkan swapchain initialized successfully !");
+        }
+
         Ok(context)
     }
 }

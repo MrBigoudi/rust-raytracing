@@ -5,8 +5,9 @@ use ash::{
     Device, Entry, Instance,
 };
 
-use super::setup::devices::{
-    device_requirements::DeviceRequirements, physical_device::PhysicalDeviceInfo,
+use super::setup::{
+    devices::{device_requirements::DeviceRequirements, physical_device::PhysicalDeviceInfo},
+    swapchains::swapchain::SwapchainHandler,
 };
 
 #[derive(Default)]
@@ -25,4 +26,9 @@ pub struct VulkanContext<'a> {
     pub physical_device_info: Option<PhysicalDeviceInfo>,
     pub physical_device: Option<PhysicalDevice>,
     pub device: Option<Device>,
+
+    pub framebuffer_width: u32,
+    pub framebuffer_height: u32,
+
+    pub swapchain_handler: Option<SwapchainHandler>,
 }
