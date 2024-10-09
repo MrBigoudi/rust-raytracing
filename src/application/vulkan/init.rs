@@ -100,6 +100,13 @@ impl VulkanContext<'_> {
             debug!("Vulkan swapchain initialized successfully !");
         }
 
+        if let Err(err) = context.init_commands() {
+            error!("Failed to initialize the vulkan commands: {:?}", err);
+            return Err(ErrorCode::InitializationFailure);
+        } else {
+            debug!("Vulkan commands initialized successfully !");
+        }
+
         Ok(context)
     }
 }

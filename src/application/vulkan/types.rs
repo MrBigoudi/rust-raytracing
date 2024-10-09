@@ -6,8 +6,7 @@ use ash::{
 };
 
 use super::setup::{
-    devices::{device_requirements::DeviceRequirements, physical_device::PhysicalDeviceInfo},
-    swapchains::swapchain::SwapchainHandler,
+    devices::{device_requirements::DeviceRequirements, physical_device::PhysicalDeviceInfo}, frame_data::VulkanFrameData, swapchains::swapchain::SwapchainHandler
 };
 
 #[derive(Default)]
@@ -31,4 +30,7 @@ pub struct VulkanContext<'a> {
     pub framebuffer_height: u32,
 
     pub swapchain_handler: Option<SwapchainHandler>,
+
+    pub frames: Vec<VulkanFrameData>,
+    pub frame_index: usize,
 }

@@ -1,7 +1,7 @@
 use ash::{
     khr::swapchain,
     vk::{
-        ColorSpaceKHR, Extent2D, Format, Framebuffer, Image, ImageView, PresentModeKHR,
+        ColorSpaceKHR, Extent2D, Format, Image, ImageView, PresentModeKHR,
         SurfaceFormatKHR, SwapchainCreateInfoKHR, SwapchainKHR,
     },
 };
@@ -17,7 +17,6 @@ pub(crate) struct SwapchainHandler {
     pub max_frames_in_flight: u16,
     pub images: Vec<Image>,
     pub image_views: Vec<ImageView>,
-    pub framebuffers: Vec<Framebuffer>,
     pub extent: Extent2D,
 }
 
@@ -32,7 +31,6 @@ impl VulkanContext<'_> {
             max_frames_in_flight: 0,
             images: Vec::new(),
             image_views: Vec::new(),
-            framebuffers: Vec::new(),
             extent: Extent2D::default(),
         });
 
