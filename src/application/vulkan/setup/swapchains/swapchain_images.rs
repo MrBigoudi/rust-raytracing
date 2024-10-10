@@ -3,7 +3,7 @@ use log::error;
 
 use crate::application::{core::error::ErrorCode, vulkan::types::VulkanContext};
 
-impl VulkanContext<'_>{
+impl VulkanContext<'_> {
     pub fn init_swapchain_images(&mut self) -> Result<(), ErrorCode> {
         let swapchain = self.swapchain_handler.as_mut().unwrap();
         swapchain.images = unsafe {

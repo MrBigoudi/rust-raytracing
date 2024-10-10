@@ -6,7 +6,10 @@ use log::debug;
 use crate::application::{core::error::ErrorCode, vulkan::types::VulkanContext};
 
 impl VulkanContext<'_> {
-    pub fn swapchain_select_max_frames_in_flight(&mut self, nb_frames: u16) -> Result<(), ErrorCode> {
+    pub fn swapchain_select_max_frames_in_flight(
+        &mut self,
+        nb_frames: u16,
+    ) -> Result<(), ErrorCode> {
         let swapchain = self.swapchain_handler.as_mut().unwrap();
         swapchain.max_frames_in_flight = nb_frames;
         Ok(())

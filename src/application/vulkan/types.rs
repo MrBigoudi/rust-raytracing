@@ -6,7 +6,9 @@ use ash::{
 };
 
 use super::setup::{
-    devices::{device_requirements::DeviceRequirements, physical_device::PhysicalDeviceInfo}, frame_data::VulkanFrameData, swapchains::swapchain::SwapchainHandler
+    devices::{device_requirements::DeviceRequirements, physical_device::PhysicalDeviceInfo},
+    frame_data::VulkanFrameData,
+    swapchains::swapchain::SwapchainHandler,
 };
 
 #[derive(Default)]

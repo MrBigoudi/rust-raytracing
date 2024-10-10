@@ -1,8 +1,8 @@
 use ash::{
     khr::swapchain,
     vk::{
-        ColorSpaceKHR, Extent2D, Format, Image, ImageView, PresentModeKHR,
-        SurfaceFormatKHR, SwapchainCreateInfoKHR, SwapchainKHR,
+        ColorSpaceKHR, Extent2D, Format, Image, ImageView, PresentModeKHR, SurfaceFormatKHR,
+        SwapchainCreateInfoKHR, SwapchainKHR,
     },
 };
 use log::error;
@@ -85,8 +85,11 @@ impl VulkanContext<'_> {
 
     fn swapchain_create_base(&mut self, width: u32, height: u32) -> Result<(), ErrorCode> {
         // For triple buffering, so at most writting to 2 frames at a time
-        if let Err(err) = self.swapchain_select_max_frames_in_flight(2){
-            error!("Failed to select the number of maximum frames in flight: {:?}", err);
+        if let Err(err) = self.swapchain_select_max_frames_in_flight(2) {
+            error!(
+                "Failed to select the number of maximum frames in flight: {:?}",
+                err
+            );
             return Err(ErrorCode::VulkanFailure);
         }
         // Select the surface format and color space
@@ -155,11 +158,11 @@ impl VulkanContext<'_> {
         self.swapchain_handler.as_mut().unwrap().handler = swapchain;
 
         // Create the swapchain images
-        if let Err(err) = self.init_swapchain_images(){
+        if let Err(err) = self.init_swapchain_images() {
             error!("Failed to initialize the swapchain images: {:?}", err);
             return Err(ErrorCode::VulkanFailure);
         }
-        if let Err(err) = self.init_swapchain_image_views(){
+        if let Err(err) = self.init_swapchain_image_views() {
             error!("Failed to initialize the swapchain image views: {:?}", err);
             return Err(ErrorCode::VulkanFailure);
         }
