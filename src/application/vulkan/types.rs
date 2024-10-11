@@ -23,7 +23,7 @@ pub struct VulkanContext<'a> {
     pub surface_loader: Option<surface::Instance>,
     pub surface: Option<SurfaceKHR>,
 
-    pub device_requirements: Option<DeviceRequirements>,
+    pub device_requirements: Option<DeviceRequirements<'a>>,
     pub physical_device_info: Option<PhysicalDeviceInfo>,
     pub physical_device: Option<PhysicalDevice>,
     pub device: Option<Device>,

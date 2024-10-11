@@ -101,12 +101,12 @@ impl VulkanContext<'_> {
         for frame in &self.frames {
             let device = self.get_device()?;
             let allocator = self.get_allocator()?;
-            // Destroy command pools
-            unsafe { device.destroy_command_pool(frame.command_pool, allocator) };
             // Destroy sync structures
             unsafe { device.destroy_fence(frame.render_fence, allocator) };
             unsafe { device.destroy_semaphore(frame.swapchain_semaphore, allocator) };
             unsafe { device.destroy_semaphore(frame.render_semaphore, allocator) };
+            // Destroy command pools
+            unsafe { device.destroy_command_pool(frame.command_pool, allocator) };
         }
         Ok(())
     }

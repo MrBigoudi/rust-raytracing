@@ -19,6 +19,10 @@ pub struct Application;
 impl Application {
     /// Render
     fn render(vulkan_context: &mut VulkanContext, window: &Window) -> Result<(), ErrorCode> {
+        if let Err(err) = vulkan_context.draw(window) {
+            error!("The vulkan context failed to draw stuff: {:?}", err);
+            return Err(ErrorCode::VulkanFailure);
+        }
         Ok(())
     }
 
@@ -62,10 +66,6 @@ impl Application {
                     event: WindowEvent::CloseRequested,
                     ..
                 } => {
-                    // Clean everything
-                    if let Err(err) = vulkan_context.clean() {
-                        panic!("Failed to clean the vulkan context: {:?}", err);
-                    }
                     elwt.exit();
                 }
                 Event::AboutToWait => {
