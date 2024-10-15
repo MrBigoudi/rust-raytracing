@@ -58,8 +58,8 @@ impl VulkanContext<'_> {
         // First is the image, which is going to be the one from the swapchain
         let image = self.get_swapchain_handler()?.images[swapchain_next_index];
         // Then a clear color
-        // let flash = ((self.frame_index as f32) / 120.).sin().abs();
-        let flash = 1.;
+        let flash = ((self.frame_index as f32) / 120.).sin().abs();
+        // let flash = 1.;
         let clear_color = ClearColorValue {
             float32: [0., 0., flash, 1.],
         };

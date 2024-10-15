@@ -94,7 +94,7 @@ impl VulkanContext<'_> {
         }
         // Select the surface format and color space
         if let Err(err) = self.swapchain_select_format_and_color_space(
-            Format::B8G8R8_SRGB,
+            Format::B8G8R8A8_SRGB,
             ColorSpaceKHR::SRGB_NONLINEAR,
         ) {
             error!(
@@ -104,7 +104,8 @@ impl VulkanContext<'_> {
             return Err(ErrorCode::VulkanFailure);
         }
         // Select the presentation mode
-        if let Err(err) = self.swapchain_select_present_mode(PresentModeKHR::MAILBOX) {
+        // if let Err(err) = self.swapchain_select_present_mode(PresentModeKHR::MAILBOX) {
+        if let Err(err) = self.swapchain_select_present_mode(PresentModeKHR::FIFO) {
             error!(
                 "Failed to select the swapchain presentation mode: {:?}",
                 err
