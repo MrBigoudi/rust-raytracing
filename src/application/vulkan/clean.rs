@@ -1,64 +1,56 @@
-use log::{debug, error};
+use log::debug;
 
-use crate::application::core::error::ErrorCode;
 
 use super::types::VulkanContext;
 
-impl VulkanContext<'_> {
-    pub fn clean(&mut self) -> Result<(), ErrorCode> {
-        self.device_wait_idle()?;
+impl Drop for VulkanContext<'_> {
+    fn drop(&mut self) {
+        self.device_wait_idle().unwrap();
 
         if let Err(err) = self.clean_commands() {
-            error!("Failed to shutdown the vulkan commands: {:?}", err);
-            return Err(ErrorCode::CleaningFailure);
+            panic!("Failed to shutdown the vulkan commands: {:?}", err);
         } else {
             debug!("Vulkan commands cleaned successfully !");
         }
 
         if let Err(err) = self.clean_swpachain() {
-            error!("Failed to shutdown the vulkan swapchain: {:?}", err);
-            return Err(ErrorCode::CleaningFailure);
+            panic!("Failed to shutdown the vulkan swapchain: {:?}", err);
         } else {
             debug!("Vulkan swapchain cleaned successfully !");
         }
 
         if let Err(err) = self.clean_queues() {
-            error!(
+            panic!(
                 "Failed to shutdown the vulkan logical device queues: {:?}",
                 err
             );
-            return Err(ErrorCode::CleaningFailure);
         } else {
             debug!("Vulkan logical device queues cleaned successfully !");
         }
 
         if let Err(err) = self.clean_device() {
-            error!("Failed to shutdown the vulkan logical device: {:?}", err);
-            return Err(ErrorCode::CleaningFailure);
+            panic!("Failed to shutdown the vulkan logical device: {:?}", err);
         } else {
             debug!("Vulkan logical device cleaned successfully !");
         }
 
         if let Err(err) = self.clean_physical_device() {
-            error!("Failed to shutdown the vulkan physical device: {:?}", err);
-            return Err(ErrorCode::CleaningFailure);
+            panic!("Failed to shutdown the vulkan physical device: {:?}", err);
         } else {
             debug!("Vulkan physical device cleaned successfully !");
         }
 
         if let Err(err) = self.clean_device_requirements() {
-            error!(
+            panic!(
                 "Failed to shutdown the vulkan device requirements: {:?}",
                 err
             );
-            return Err(ErrorCode::CleaningFailure);
         } else {
             debug!("Vulkan device requirements cleaned successfully !");
         }
 
         if let Err(err) = self.clean_surface() {
-            error!("Failed to shutdown the vulkan surface: {:?}", err);
-            return Err(ErrorCode::CleaningFailure);
+            panic!("Failed to shutdown the vulkan surface: {:?}", err);
         } else {
             debug!("Vulkan surface cleaned successfully !");
         }
@@ -66,34 +58,29 @@ impl VulkanContext<'_> {
         #[cfg(debug_assertions)]
         {
             if let Err(err) = self.clean_debugger() {
-                error!("Failed to clean the vulkan debugger: {:?}", err);
-                return Err(ErrorCode::CleaningFailure);
+                panic!("Failed to clean the vulkan debugger: {:?}", err);
             } else {
                 debug!("Vulkan debugger cleaned successfully !");
             }
         }
 
         if let Err(err) = self.clean_instance() {
-            error!("Failed to clean the vulkan instance: {:?}", err);
-            return Err(ErrorCode::CleaningFailure);
+            panic!("Failed to clean the vulkan instance: {:?}", err);
         } else {
             debug!("Vulkan instance cleaned successfully !");
         }
 
         if let Err(err) = self.clean_allocator() {
-            error!("Failed to clean the vulkan allocator: {:?}", err);
-            return Err(ErrorCode::CleaningFailure);
+            panic!("Failed to clean the vulkan allocator: {:?}", err);
         } else {
             debug!("Vulkan allocator cleaned successfully !");
         }
 
         if let Err(err) = self.clean_entry() {
-            error!("Failed to clean the vulkan entry: {:?}", err);
-            return Err(ErrorCode::CleaningFailure);
+            panic!("Failed to clean the vulkan entry: {:?}", err);
         } else {
             debug!("Vulkan entry cleaned successfully !");
         }
 
-        Ok(())
     }
 }

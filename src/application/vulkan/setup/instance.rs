@@ -79,8 +79,6 @@ impl VulkanContext<'_> {
                     return Err(ErrorCode::VulkanFailure);
                 }
             };
-        required_extensions
-            .push(unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_KHR_surface\0").as_ptr() });
 
         #[cfg(debug_assertions)]
         required_extensions

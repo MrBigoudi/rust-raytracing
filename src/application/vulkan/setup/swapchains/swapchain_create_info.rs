@@ -71,7 +71,7 @@ impl VulkanContext<'_> {
         // Specifies operations the images will be used for. Usually used as color attachment to render directly to them
         // Possible to render to another image first and do post-processing (then use VK_IMAGE_USAGE_TRANSFER_DST_BIT instead
         // and use a memory operation to transfer the rendered image to a swap chain image)
-        let image_usage = ImageUsageFlags::COLOR_ATTACHMENT;
+        let image_usage = ImageUsageFlags::COLOR_ATTACHMENT | ImageUsageFlags::TRANSFER_DST;
         // Specifies how to handle swap chain images that will be used across multiple queue families
         let (queue_family_indices, image_sharing_mode) =
             self.swapchain_get_queue_families_and_image_sharing_mode()?;
