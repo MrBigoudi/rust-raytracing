@@ -85,7 +85,7 @@ impl VulkanContext<'_> {
             debug_utils::Instance::new(self.get_entry()?, self.get_instance()?);
         let debug_callback = unsafe {
             match debug_utils_loader
-                .create_debug_utils_messenger(&debug_info, self.get_allocator()?)
+                .create_debug_utils_messenger(&debug_info, self.get_allocation_callback()?)
             {
                 Ok(callback) => callback,
                 Err(err) => {
@@ -101,9 +101,14 @@ impl VulkanContext<'_> {
     }
 
     pub fn clean_debugger(&mut self) -> Result<(), ErrorCode> {
+        if self.debug_utils_loader.is_none() && self.debug_callback.is_none() {
+            return Ok(());
+        }
         unsafe {
-            self.get_debug_loader()?
-                .destroy_debug_utils_messenger(*self.get_debug_callback()?, self.get_allocator()?);
+            self.get_debug_loader()?.destroy_debug_utils_messenger(
+                *self.get_debug_callback()?,
+                self.get_allocation_callback()?,
+            );
         }
         self.debug_callback = None;
         self.debug_utils_loader = None;

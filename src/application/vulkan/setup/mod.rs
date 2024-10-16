@@ -2,6 +2,7 @@ pub mod allocator;
 pub mod commands;
 pub mod debug;
 pub mod devices;
+pub mod draw_resources;
 pub mod entry;
 pub mod frame_data;
 pub mod framebuffer;

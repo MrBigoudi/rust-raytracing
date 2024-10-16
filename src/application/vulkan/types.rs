@@ -1,12 +1,16 @@
+use std::mem::ManuallyDrop;
+
 use ash::{
     ext::debug_utils,
     khr::surface,
-    vk::{self, AllocationCallbacks, PhysicalDevice, SurfaceKHR},
+    vk::{self, AllocationCallbacks, Extent2D, PhysicalDevice, SurfaceKHR},
     Device, Entry, Instance,
 };
 
 use super::setup::{
+    allocator::AllocatorWrapper,
     devices::{device_requirements::DeviceRequirements, physical_device::PhysicalDeviceInfo},
+    draw_resources::AllocatedImage,
     frame_data::VulkanFrameData,
     swapchains::swapchain::SwapchainHandler,
 };
@@ -14,8 +18,9 @@ use super::setup::{
 #[derive(Default)]
 pub struct VulkanContext<'a> {
     pub entry: Option<Entry>,
-    pub allocator: Option<&'a AllocationCallbacks<'a>>,
+    pub allocation_callback: Option<&'a AllocationCallbacks<'a>>,
     pub instance: Option<Instance>,
+    pub allocator: Option<ManuallyDrop<AllocatorWrapper>>,
 
     pub debug_utils_loader: Option<debug_utils::Instance>,
     pub debug_callback: Option<vk::DebugUtilsMessengerEXT>,
@@ -35,4 +40,7 @@ pub struct VulkanContext<'a> {
 
     pub frames: Vec<VulkanFrameData>,
     pub frame_index: usize,
+
+    pub draw_image: Option<AllocatedImage>,
+    pub draw_extent: Extent2D,
 }

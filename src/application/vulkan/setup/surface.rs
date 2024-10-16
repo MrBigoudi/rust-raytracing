@@ -56,9 +56,12 @@ impl VulkanContext<'_> {
     }
 
     pub fn clean_surface(&mut self) -> Result<(), ErrorCode> {
+        if self.surface.is_none() && self.surface_loader.is_none() {
+            return Ok(());
+        }
         unsafe {
             self.get_surface_loader()?
-                .destroy_surface(*self.get_surface()?, self.get_allocator()?);
+                .destroy_surface(*self.get_surface()?, self.get_allocation_callback()?);
         }
         self.surface = None;
         self.surface_loader = None;

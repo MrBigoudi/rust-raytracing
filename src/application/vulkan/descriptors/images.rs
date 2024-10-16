@@ -1,7 +1,8 @@
 use ash::{
     vk::{
-        AccessFlags2, CommandBuffer, DependencyInfo, Image, ImageAspectFlags, ImageLayout,
-        ImageMemoryBarrier2, ImageSubresourceRange, PipelineStageFlags2, REMAINING_ARRAY_LAYERS,
+        AccessFlags2, BlitImageInfo2, CommandBuffer, DependencyInfo, Extent2D, Filter, Image,
+        ImageAspectFlags, ImageBlit2, ImageLayout, ImageMemoryBarrier2, ImageSubresourceLayers,
+        ImageSubresourceRange, Offset3D, PipelineStageFlags2, REMAINING_ARRAY_LAYERS,
         REMAINING_MIP_LEVELS,
     },
     Device,
@@ -56,6 +57,62 @@ pub fn transition_image(
     let dependeny_info = DependencyInfo::default().image_memory_barriers(&image_barriers);
 
     unsafe { device.cmd_pipeline_barrier2(*cmd, &dependeny_info) };
+
+    Ok(())
+}
+
+pub fn copy_image_to_image(
+    device: &Device,
+    command_buffer: &CommandBuffer,
+    image_src: &Image,
+    image_dst: &Image,
+    size_src: &Extent2D,
+    size_dst: &Extent2D,
+) -> Result<(), ErrorCode> {
+    let src_offsets: [Offset3D; 2] = [
+        Offset3D::default(),
+        Offset3D::default()
+            .x(size_src.width as i32)
+            .y(size_src.height as i32)
+            .z(1),
+    ];
+    let dst_offsets: [Offset3D; 2] = [
+        Offset3D::default(),
+        Offset3D::default()
+            .x(size_dst.width as i32)
+            .y(size_dst.height as i32)
+            .z(1),
+    ];
+
+    let src_subresource = ImageSubresourceLayers::default()
+        .aspect_mask(ImageAspectFlags::COLOR)
+        .base_array_layer(0)
+        .layer_count(1)
+        .mip_level(0);
+
+    let dst_subresource = ImageSubresourceLayers::default()
+        .aspect_mask(ImageAspectFlags::COLOR)
+        .base_array_layer(0)
+        .layer_count(1)
+        .mip_level(0);
+
+    let blit_regions = [ImageBlit2::default()
+        .src_offsets(src_offsets)
+        .dst_offsets(dst_offsets)
+        .src_subresource(src_subresource)
+        .dst_subresource(dst_subresource)];
+
+    let blit_image_info = BlitImageInfo2::default()
+        .dst_image(*image_dst)
+        .dst_image_layout(ImageLayout::TRANSFER_DST_OPTIMAL)
+        .src_image(*image_src)
+        .src_image_layout(ImageLayout::TRANSFER_SRC_OPTIMAL)
+        .filter(Filter::LINEAR)
+        .regions(&blit_regions);
+
+    unsafe {
+        device.cmd_blit_image2(*command_buffer, &blit_image_info);
+    }
 
     Ok(())
 }

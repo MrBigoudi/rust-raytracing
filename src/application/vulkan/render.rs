@@ -9,8 +9,9 @@ use winit::window::Window;
 use crate::application::core::error::ErrorCode;
 
 use super::{
-    descriptors::images::{get_default_image_subresource_range, transition_image},
-    setup::frame_data::FRAME_OVERLAP,
+    descriptors::images::{
+        copy_image_to_image, get_default_image_subresource_range, transition_image,
+    },
     types::VulkanContext,
 };
 
@@ -53,10 +54,10 @@ impl VulkanContext<'_> {
         }
     }
 
-    fn prepare_clear_screen_command(&self, swapchain_next_index: usize) -> Result<(), ErrorCode> {
+    fn prepare_clear_screen_command(&self) -> Result<(), ErrorCode> {
         // vkCmdClearColorImage requires 3 main parameters to work
-        // First is the image, which is going to be the one from the swapchain
-        let image = self.get_swapchain_handler()?.images[swapchain_next_index];
+        // First is the image, which is going to be our draw image
+        let image = self.get_draw_image()?.image;
         // Then a clear color
         let flash = ((self.frame_index as f32) / 120.).sin().abs();
         // let flash = 1.;
@@ -115,8 +116,8 @@ impl VulkanContext<'_> {
             return Err(ErrorCode::VulkanFailure);
         }
 
-        // We begin by transitioning the swapchain image
-        let image = self.get_swapchain_handler()?.images[swapchain_next_index];
+        let draw_image = &self.get_draw_image()?.image;
+        let swapchain_image = &self.get_swapchain_handler()?.images[swapchain_next_index];
         // VK_IMAGE_LAYOUT_UNDEFINED Is the “dont care” layout
         // Its also the layout newly created images will be at
         // We use it when we dont care about the data that is already in the image, and we are fine with the GPU destroying it
@@ -128,20 +129,48 @@ impl VulkanContext<'_> {
         transition_image(
             device,
             &main_command_buffer,
-            &image,
+            draw_image,
             ImageLayout::UNDEFINED,
             ImageLayout::GENERAL,
         )?;
 
-        self.prepare_clear_screen_command(swapchain_next_index)?;
+        self.prepare_clear_screen_command()?;
+
+        // Transition the draw image and the swapchain image into their correct transfer layouts
+        transition_image(
+            device,
+            &main_command_buffer,
+            draw_image,
+            ImageLayout::GENERAL,
+            ImageLayout::TRANSFER_SRC_OPTIMAL,
+        )?;
+        transition_image(
+            device,
+            &main_command_buffer,
+            swapchain_image,
+            ImageLayout::UNDEFINED,
+            ImageLayout::TRANSFER_DST_OPTIMAL,
+        )?;
+
+        // Copy the draw image into the swapchain image
+        let draw_extent = &self.draw_extent;
+        let swapchain_extent = &self.get_swapchain_handler()?.extent;
+        copy_image_to_image(
+            device,
+            &main_command_buffer,
+            draw_image,
+            swapchain_image,
+            draw_extent,
+            swapchain_extent,
+        )?;
 
         // Transition the image to VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
         // This is the only image layout that the swapchain allows for presenting to screen
         transition_image(
             device,
             &main_command_buffer,
-            &image,
-            ImageLayout::GENERAL,
+            swapchain_image,
+            ImageLayout::TRANSFER_DST_OPTIMAL,
             ImageLayout::PRESENT_SRC_KHR,
         )?;
 
@@ -160,11 +189,9 @@ impl VulkanContext<'_> {
 
         // Prepare the submission to the queue
         let main_command_buffer = current_frame.main_command_buffer;
-        let command_buffer_submit_infos = [
-            CommandBufferSubmitInfo::default()
-                .command_buffer(main_command_buffer)
-                .device_mask(0)
-        ];
+        let command_buffer_submit_infos = [CommandBufferSubmitInfo::default()
+            .command_buffer(main_command_buffer)
+            .device_mask(0)];
 
         // For the wait info, we are going to use the swapchain semaphore of the current frame.
         // When we called vkAcquireNextImageKHR, we set this same semaphore to be signaled,
@@ -236,15 +263,22 @@ impl VulkanContext<'_> {
         Ok(())
     }
 
+    fn update_draw_extent(&mut self) -> Result<(), ErrorCode> {
+        self.draw_extent.width = self.get_draw_image()?.image_extent.width;
+        self.draw_extent.height = self.get_draw_image()?.image_extent.height;
+        Ok(())
+    }
+
     pub fn draw(&mut self, window: &Window) -> Result<(), ErrorCode> {
         let timeout_in_ns: u64 = 1_000_000_000;
         self.reset_render_fence(timeout_in_ns)?;
         let (swapchain_next_index, is_swapchain_suboptimal) =
             self.acquire_next_swapchain_image(timeout_in_ns)?;
+        self.update_draw_extent()?;
         self.prepare_rendering_commands(swapchain_next_index as usize)?;
         self.submit_rendering_commands()?;
         self.present_frame_to_screen(swapchain_next_index)?;
-        self.frame_index = self.frame_index + 1;
+        self.frame_index += 1;
         Ok(())
     }
 }

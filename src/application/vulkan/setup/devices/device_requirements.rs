@@ -1,6 +1,8 @@
 use std::ffi::CStr;
 
-use ash::vk::{PhysicalDeviceFeatures, PhysicalDeviceVulkan12Features, PhysicalDeviceVulkan13Features};
+use ash::vk::{
+    PhysicalDeviceFeatures, PhysicalDeviceVulkan12Features, PhysicalDeviceVulkan13Features,
+};
 use log::error;
 
 use crate::application::{core::error::ErrorCode, vulkan::types::VulkanContext};
@@ -21,16 +23,13 @@ impl Default for DeviceRequirements<'_> {
     fn default() -> Self {
         let required_features = PhysicalDeviceFeatures::default()
             .sampler_anisotropy(true)
-            .shader_clip_distance(true)
-        ;
+            .shader_clip_distance(true);
         let features_12 = PhysicalDeviceVulkan12Features::default()
             .buffer_device_address(true)
-            .descriptor_indexing(true)
-        ;
+            .descriptor_indexing(true);
         let features_13 = PhysicalDeviceVulkan13Features::default()
             .synchronization2(true)
-            .dynamic_rendering(true)
-        ;
+            .dynamic_rendering(true);
 
         let required_extensions =
             vec![unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_KHR_swapchain\0").as_ptr() }];

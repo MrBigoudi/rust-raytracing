@@ -44,22 +44,21 @@ impl VulkanContext<'_> {
         };
 
         let requirements = self.get_device_requirements()?;
-        let mut features_12 = requirements.features_12.clone();
-        let mut features_13 = requirements.features_13.clone();
+        let mut features_12 = requirements.features_12;
+        let mut features_13 = requirements.features_13;
 
         let device_create_info = DeviceCreateInfo::default()
             .queue_create_infos(queue_create_infos.as_slice())
             .enabled_extension_names(requirements.extensions.as_slice())
             .enabled_features(&requirements.features)
             .push_next(&mut features_12)
-            .push_next(&mut features_13)
-        ;
+            .push_next(&mut features_13);
 
         unsafe {
             match self.get_instance()?.create_device(
                 *self.get_physical_device()?,
                 &device_create_info,
-                self.get_allocator()?,
+                self.get_allocation_callback()?,
             ) {
                 Ok(device) => self.device = Some(device),
                 Err(err) => {
@@ -73,8 +72,12 @@ impl VulkanContext<'_> {
     }
 
     pub fn clean_device(&mut self) -> Result<(), ErrorCode> {
+        if self.device.is_none() {
+            return Ok(());
+        }
         unsafe {
-            self.get_device()?.destroy_device(self.get_allocator()?);
+            self.get_device()?
+                .destroy_device(self.get_allocation_callback()?);
         }
         self.device = None;
         Ok(())

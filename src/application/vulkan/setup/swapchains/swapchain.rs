@@ -42,6 +42,9 @@ impl VulkanContext<'_> {
     }
 
     pub fn clean_swpachain(&mut self) -> Result<(), ErrorCode> {
+        if self.swapchain_handler.is_none() {
+            return Ok(());
+        }
         self.swapchain_destroy_base()?;
         self.swapchain_handler = None;
         Ok(())
@@ -70,14 +73,14 @@ impl VulkanContext<'_> {
         for image_view in &self.get_swapchain_handler()?.image_views {
             let device = self.get_device()?;
             unsafe {
-                device.destroy_image_view(*image_view, self.get_allocator()?);
+                device.destroy_image_view(*image_view, self.get_allocation_callback()?);
             }
         }
 
         unsafe {
             let device = &self.get_swapchain_handler()?.device;
             let swapchain = self.get_swapchain_handler()?.handler;
-            device.destroy_swapchain(swapchain, self.get_allocator()?)
+            device.destroy_swapchain(swapchain, self.get_allocation_callback()?)
         }
 
         Ok(())
@@ -148,7 +151,9 @@ impl VulkanContext<'_> {
         // Create the swapchain
         let swapchain = unsafe {
             let swapchain_device = &self.get_swapchain_handler()?.device;
-            match swapchain_device.create_swapchain(&swapchain_create_info, self.get_allocator()?) {
+            match swapchain_device
+                .create_swapchain(&swapchain_create_info, self.get_allocation_callback()?)
+            {
                 Ok(swapchain) => swapchain,
                 Err(err) => {
                     error!("Failed to create a vulkan swapchain: {:?}", err);

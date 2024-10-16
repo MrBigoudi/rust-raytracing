@@ -134,7 +134,7 @@ impl VulkanContext<'_> {
         unsafe {
             match self
                 .get_entry()?
-                .create_instance(&instance_create_info, self.get_allocator()?)
+                .create_instance(&instance_create_info, self.get_allocation_callback()?)
             {
                 Ok(instance) => {
                     self.instance = Some(instance);
@@ -149,8 +149,12 @@ impl VulkanContext<'_> {
     }
 
     pub fn clean_instance(&mut self) -> Result<(), ErrorCode> {
+        if self.instance.is_none() {
+            return Ok(());
+        }
         unsafe {
-            self.get_instance()?.destroy_instance(self.get_allocator()?);
+            self.get_instance()?
+                .destroy_instance(self.get_allocation_callback()?);
         }
         self.instance = None;
         Ok(())

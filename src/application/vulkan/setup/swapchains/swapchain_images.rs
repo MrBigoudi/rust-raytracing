@@ -38,7 +38,7 @@ impl VulkanContext<'_> {
 
             let new_image_view = unsafe {
                 let device = self.get_device()?;
-                match device.create_image_view(&image_view_info, self.get_allocator()?) {
+                match device.create_image_view(&image_view_info, self.get_allocation_callback()?) {
                     Ok(image_views) => image_views,
                     Err(err) => {
                         error!(

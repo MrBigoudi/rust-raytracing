@@ -1,11 +1,22 @@
 use log::debug;
 
-
 use super::types::VulkanContext;
 
 impl Drop for VulkanContext<'_> {
     fn drop(&mut self) {
         self.device_wait_idle().unwrap();
+
+        if let Err(err) = self.clean_draw_resources() {
+            panic!("Failed to shutdown the vulkan drawing resources: {:?}", err);
+        } else {
+            debug!("Vulkan drawing resources cleaned successfully !");
+        }
+
+        if let Err(err) = self.clean_allocator() {
+            panic!("Failed to shutdown the vulkan memory allocator: {:?}", err);
+        } else {
+            debug!("Vulkan memory allocator cleaned successfully !");
+        }
 
         if let Err(err) = self.clean_commands() {
             panic!("Failed to shutdown the vulkan commands: {:?}", err);
@@ -70,7 +81,7 @@ impl Drop for VulkanContext<'_> {
             debug!("Vulkan instance cleaned successfully !");
         }
 
-        if let Err(err) = self.clean_allocator() {
+        if let Err(err) = self.clean_allocation_callback() {
             panic!("Failed to clean the vulkan allocator: {:?}", err);
         } else {
             debug!("Vulkan allocator cleaned successfully !");
@@ -81,6 +92,5 @@ impl Drop for VulkanContext<'_> {
         } else {
             debug!("Vulkan entry cleaned successfully !");
         }
-
     }
 }

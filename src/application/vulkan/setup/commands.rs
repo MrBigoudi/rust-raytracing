@@ -11,7 +11,7 @@ use super::frame_data::{VulkanFrameData, FRAME_OVERLAP};
 impl VulkanContext<'_> {
     fn init_semaphore(&mut self, info: &SemaphoreCreateInfo) -> Result<Semaphore, ErrorCode> {
         let device = self.get_device()?;
-        let allocator = self.get_allocator()?;
+        let allocator = self.get_allocation_callback()?;
         match unsafe { device.create_semaphore(info, allocator) } {
             Ok(semaphore) => Ok(semaphore),
             Err(err) => {
@@ -23,7 +23,7 @@ impl VulkanContext<'_> {
 
     fn init_fence(&mut self, info: &FenceCreateInfo) -> Result<Fence, ErrorCode> {
         let device = self.get_device()?;
-        let allocator = self.get_allocator()?;
+        let allocator = self.get_allocation_callback()?;
         match unsafe { device.create_fence(info, allocator) } {
             Ok(fence) => Ok(fence),
             Err(err) => {
@@ -44,9 +44,10 @@ impl VulkanContext<'_> {
         for _ in 0..FRAME_OVERLAP {
             let device = self.get_device()?;
             let command_pool = unsafe {
-                match device
-                    .create_command_pool(&graphics_commands_pool_info, self.get_allocator()?)
-                {
+                match device.create_command_pool(
+                    &graphics_commands_pool_info,
+                    self.get_allocation_callback()?,
+                ) {
                     Ok(pool) => pool,
                     Err(err) => {
                         error!("Failed to create a command pool: {:?}", err);
@@ -100,7 +101,7 @@ impl VulkanContext<'_> {
     pub fn clean_commands(&mut self) -> Result<(), ErrorCode> {
         for frame in &self.frames {
             let device = self.get_device()?;
-            let allocator = self.get_allocator()?;
+            let allocator = self.get_allocation_callback()?;
             // Destroy sync structures
             unsafe { device.destroy_fence(frame.render_fence, allocator) };
             unsafe { device.destroy_semaphore(frame.swapchain_semaphore, allocator) };

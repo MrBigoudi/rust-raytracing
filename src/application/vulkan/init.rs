@@ -16,7 +16,7 @@ impl VulkanContext<'_> {
             debug!("Vulkan entry initialized successfully !");
         }
 
-        if let Err(err) = context.init_allocator() {
+        if let Err(err) = context.init_allocation_callback() {
             error!("Failed to initialize the vulkan allocator: {:?}", err);
             return Err(ErrorCode::InitializationFailure);
         } else {
@@ -105,6 +105,26 @@ impl VulkanContext<'_> {
             return Err(ErrorCode::InitializationFailure);
         } else {
             debug!("Vulkan commands initialized successfully !");
+        }
+
+        if let Err(err) = context.init_allocator() {
+            error!(
+                "Failed to initialize the vulkan memory allocator: {:?}",
+                err
+            );
+            return Err(ErrorCode::InitializationFailure);
+        } else {
+            debug!("Vulkan memory allocator initialized successfully !");
+        }
+
+        if let Err(err) = context.init_draw_resources() {
+            error!(
+                "Failed to initialize the vulkan drawing resources: {:?}",
+                err
+            );
+            return Err(ErrorCode::InitializationFailure);
+        } else {
+            debug!("Vulkan drawing resources initialized successfully !");
         }
 
         Ok(context)
