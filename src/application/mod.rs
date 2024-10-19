@@ -1,27 +1,31 @@
 use core::error::ErrorCode;
 
-use pipelines::Pipelines;
-use scene::scene::Scene;
 use ::winit::{
     event::{Event, WindowEvent},
     window::Window,
 };
 use log::{debug, error};
 use parameters::ApplicationParameters;
+use pipelines::Pipelines;
+use scene::Scene;
 use vulkan::types::VulkanContext;
 
 mod core;
 mod parameters;
+mod pipelines;
 mod scene;
 mod vulkan;
 mod winit;
-mod pipelines;
 
 pub struct Application;
 
 impl Application {
     /// Render
-    fn render(vulkan_context: &mut VulkanContext, window: &Window, pipelines: &Pipelines) -> Result<(), ErrorCode> {
+    fn render(
+        vulkan_context: &mut VulkanContext,
+        window: &Window,
+        pipelines: &Pipelines,
+    ) -> Result<(), ErrorCode> {
         if let Err(err) = vulkan_context.draw(window, pipelines) {
             error!("The vulkan context failed to draw stuff: {:?}", err);
             return Err(ErrorCode::VulkanFailure);
@@ -63,7 +67,7 @@ impl Application {
         };
 
         debug!("Initializing the pipelines...");
-        let pipelines = match Pipelines::init(&vulkan_context, &Scene::default()){
+        let pipelines = match Pipelines::init(&vulkan_context, &Scene::default()) {
             Ok(pipelines) => pipelines,
             Err(err) => {
                 error!("Failed to initialize the pipelines: {:?}", err);
@@ -75,12 +79,12 @@ impl Application {
         if let Err(err) = event_loop.run(move |event, elwt| {
             match event {
                 Event::LoopExiting => {
-                    if let Err(err) = pipelines.clean(&vulkan_context){
+                    if let Err(err) = pipelines.clean(&vulkan_context) {
                         panic!("Failed to clean the pipelines: {:?}", err);
                     } else {
                         debug!("Pipelines cleaned successfully !");
                     }
-                    if let Err(err) = vulkan_context.clean(){
+                    if let Err(err) = vulkan_context.clean() {
                         panic!("Failed to clean the vulkan context: {:?}", err);
                     } else {
                         debug!("Vulkan context cleaned successfully !");
@@ -99,7 +103,8 @@ impl Application {
                     event: WindowEvent::RedrawRequested,
                     ..
                 } => {
-                    if let Err(err) = Application::render(&mut vulkan_context, &window, &pipelines) {
+                    if let Err(err) = Application::render(&mut vulkan_context, &window, &pipelines)
+                    {
                         panic!("Failed to render the application: {:?}", err);
                     }
                 }

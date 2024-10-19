@@ -46,11 +46,9 @@ impl DescriptorLayoutBuilder<'_> {
             binding.stage_flags = shader_stage;
         }
 
-        let descriptor_set_layout_info =
-            DescriptorSetLayoutCreateInfo::default()
-                .bindings(self.bindings.as_slice())
-                .flags(flags)
-        ;
+        let descriptor_set_layout_info = DescriptorSetLayoutCreateInfo::default()
+            .bindings(self.bindings.as_slice())
+            .flags(flags);
 
         match unsafe {
             device.create_descriptor_set_layout(&descriptor_set_layout_info, allocation_callback)

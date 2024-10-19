@@ -1,6 +1,10 @@
 use std::path::Path;
 
-use ash::{util::read_spv, vk::{ShaderModule, ShaderModuleCreateInfo}, Device};
+use ash::{
+    util::read_spv,
+    vk::{ShaderModule, ShaderModuleCreateInfo},
+    Device,
+};
 use log::error;
 
 use crate::application::core::error::ErrorCode;
@@ -18,36 +22,37 @@ impl Shader {
             .into_owned()
     }
 
-    pub fn load_shader_module(file_path: String, device: &Device) -> Result<ShaderModule, ErrorCode> {
+    pub fn load_shader_module(
+        file_path: String,
+        device: &Device,
+    ) -> Result<ShaderModule, ErrorCode> {
         let crate_path = env!("CARGO_MANIFEST_DIR");
         let spv_path = crate_path.to_owned() + &file_path;
         // Open the file with cursor at the end
-        let mut spv_file = match std::fs::File::open(spv_path.clone()){
+        let mut spv_file = match std::fs::File::open(spv_path.clone()) {
             Ok(file) => file,
             Err(err) => {
                 error!("Failed to open the shader `{:?}': {:?}", spv_path, err);
                 return Err(ErrorCode::IO);
-            },
+            }
         };
 
-        let spv_code = match read_spv(&mut spv_file){
+        let spv_code = match read_spv(&mut spv_file) {
             Ok(code) => code,
             Err(err) => {
                 error!("Failed to read the shader `{:?}': {:?}", spv_path, err);
                 return Err(ErrorCode::IO);
-            },
+            }
         };
 
-        let create_info = ShaderModuleCreateInfo::default()
-            .code(&spv_code)
-        ;
+        let create_info = ShaderModuleCreateInfo::default().code(&spv_code);
 
-        match unsafe { device.create_shader_module(&create_info, None)}{
+        match unsafe { device.create_shader_module(&create_info, None) } {
             Ok(module) => Ok(module),
             Err(err) => {
                 error!("Failed to create a shader module: {:?}", err);
                 Err(ErrorCode::VulkanFailure)
-            },
+            }
         }
     }
 }

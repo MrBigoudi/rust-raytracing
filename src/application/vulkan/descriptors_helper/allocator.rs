@@ -1,6 +1,8 @@
 use ash::{
     vk::{
-        AllocationCallbacks, DescriptorPool, DescriptorPoolCreateInfo, DescriptorPoolResetFlags, DescriptorPoolSize, DescriptorSet, DescriptorSetAllocateInfo, DescriptorSetLayout, DescriptorType
+        AllocationCallbacks, DescriptorPool, DescriptorPoolCreateInfo, DescriptorPoolResetFlags,
+        DescriptorPoolSize, DescriptorSet, DescriptorSetAllocateInfo, DescriptorSetLayout,
+        DescriptorType,
     },
     Device,
 };
@@ -53,11 +55,10 @@ impl DescriptorAllocator {
         Ok(())
     }
 
-    pub fn reset_pool(
-        &mut self,
-        device: &Device,
-    ) -> Result<(), ErrorCode> {
-        if let Err(err) = unsafe {device.reset_descriptor_pool(self.pool, DescriptorPoolResetFlags::empty())}{
+    pub fn reset_pool(&mut self, device: &Device) -> Result<(), ErrorCode> {
+        if let Err(err) =
+            unsafe { device.reset_descriptor_pool(self.pool, DescriptorPoolResetFlags::empty()) }
+        {
             error!("Failed to reset a descriptor pool: {:?}", err);
             return Err(ErrorCode::VulkanFailure);
         }
@@ -69,9 +70,7 @@ impl DescriptorAllocator {
         device: &Device,
         allocation_callback: Option<&AllocationCallbacks>,
     ) -> Result<(), ErrorCode> {
-        unsafe {
-            device.destroy_descriptor_pool(self.pool, allocation_callback)
-        }
+        unsafe { device.destroy_descriptor_pool(self.pool, allocation_callback) }
         Ok(())
     }
 
@@ -83,10 +82,9 @@ impl DescriptorAllocator {
         let layouts = [layout];
         let allocate_info = DescriptorSetAllocateInfo::default()
             .descriptor_pool(self.pool)
-            .set_layouts(&layouts)
-        ;
+            .set_layouts(&layouts);
 
-        match unsafe{device.allocate_descriptor_sets(&allocate_info)}{
+        match unsafe { device.allocate_descriptor_sets(&allocate_info) } {
             Ok(descriptor_sets) => Ok(descriptor_sets[0]),
             Err(err) => {
                 error!("Failed to allocate a descriptor set: {:?}", err);

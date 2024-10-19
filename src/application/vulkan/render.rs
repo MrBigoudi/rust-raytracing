@@ -6,7 +6,10 @@ use ash::vk::{
 use log::error;
 use winit::window::Window;
 
-use crate::application::{core::error::ErrorCode, pipelines::{compute_pipeline::ComputePipeline, Pipelines}};
+use crate::application::{
+    core::error::ErrorCode,
+    pipelines::{compute_pipeline::ComputePipeline, Pipelines},
+};
 
 use super::{
     descriptors_helper::images::{
@@ -89,7 +92,11 @@ impl VulkanContext<'_> {
         Ok(())
     }
 
-    fn prepare_rendering_commands(&self, swapchain_next_index: usize, pipelines: &Pipelines) -> Result<(), ErrorCode> {
+    fn prepare_rendering_commands(
+        &self,
+        swapchain_next_index: usize,
+        pipelines: &Pipelines,
+    ) -> Result<(), ErrorCode> {
         // Vulkan handles are just a 64 bit handle/pointer, so its fine to copy them around
         // But remember that their actual data is handled by vulkan itself
         let main_command_buffer = self.get_current_frame()?.main_command_buffer;
