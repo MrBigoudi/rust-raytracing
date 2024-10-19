@@ -6,10 +6,10 @@ use ash::vk::{
 use log::error;
 use winit::window::Window;
 
-use crate::application::core::error::ErrorCode;
+use crate::application::{core::error::ErrorCode, pipelines::{compute_pipeline::ComputePipeline, Pipelines}};
 
 use super::{
-    descriptors::images::{
+    descriptors_helper::images::{
         copy_image_to_image, get_default_image_subresource_range, transition_image,
     },
     types::VulkanContext,
@@ -84,7 +84,12 @@ impl VulkanContext<'_> {
         Ok(())
     }
 
-    fn prepare_rendering_commands(&self, swapchain_next_index: usize) -> Result<(), ErrorCode> {
+    fn prepare_raytracing_command(&self, pipelines: &Pipelines) -> Result<(), ErrorCode> {
+        pipelines.test_pipeline.run(self)?;
+        Ok(())
+    }
+
+    fn prepare_rendering_commands(&self, swapchain_next_index: usize, pipelines: &Pipelines) -> Result<(), ErrorCode> {
         // Vulkan handles are just a 64 bit handle/pointer, so its fine to copy them around
         // But remember that their actual data is handled by vulkan itself
         let main_command_buffer = self.get_current_frame()?.main_command_buffer;
@@ -135,6 +140,7 @@ impl VulkanContext<'_> {
         )?;
 
         self.prepare_clear_screen_command()?;
+        self.prepare_raytracing_command(pipelines)?;
 
         // Transition the draw image and the swapchain image into their correct transfer layouts
         transition_image(
@@ -269,13 +275,13 @@ impl VulkanContext<'_> {
         Ok(())
     }
 
-    pub fn draw(&mut self, window: &Window) -> Result<(), ErrorCode> {
+    pub fn draw(&mut self, window: &Window, pipelines: &Pipelines) -> Result<(), ErrorCode> {
         let timeout_in_ns: u64 = 1_000_000_000;
         self.reset_render_fence(timeout_in_ns)?;
         let (swapchain_next_index, is_swapchain_suboptimal) =
             self.acquire_next_swapchain_image(timeout_in_ns)?;
         self.update_draw_extent()?;
-        self.prepare_rendering_commands(swapchain_next_index as usize)?;
+        self.prepare_rendering_commands(swapchain_next_index as usize, pipelines)?;
         self.submit_rendering_commands()?;
         self.present_frame_to_screen(swapchain_next_index)?;
         self.frame_index += 1;

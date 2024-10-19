@@ -4,7 +4,10 @@ use std::process::Command;
 
 fn main() {
     // Specify the list of shaders and their entry points
-    let shaders = vec![("src/shaders/raytracing.slang", "main")];
+    let shaders = vec![
+        ("src/shaders/raytracing.slang", "main"),
+        ("src/shaders/test.slang", "main"),
+    ];
 
     // Define the base output directory
     let out_dir = Path::new("target/shaders");

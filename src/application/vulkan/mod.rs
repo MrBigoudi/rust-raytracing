@@ -1,5 +1,5 @@
 pub mod clean;
-pub mod descriptors;
+pub mod descriptors_helper;
 pub mod init;
 pub mod render;
 pub mod setup;
