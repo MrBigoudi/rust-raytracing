@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct ApplicationParameters {
     pub window_title: String,
     pub window_width: u16,

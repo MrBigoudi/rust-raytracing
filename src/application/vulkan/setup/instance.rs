@@ -103,11 +103,8 @@ impl VulkanContext<'_> {
         }
     }
 
-    pub fn init_instance(
-        &mut self,
-        application_name: &str,
-        window: &Window,
-    ) -> Result<(), ErrorCode> {
+    pub fn init_instance(&mut self, window: &Window) -> Result<(), ErrorCode> {
+        let application_name = self.parameters.window_title.as_str();
         let application_name_cstr = CString::new(application_name).unwrap();
 
         let application_info = ApplicationInfo::default()

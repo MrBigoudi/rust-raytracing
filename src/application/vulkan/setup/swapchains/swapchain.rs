@@ -5,7 +5,7 @@ use ash::{
         SwapchainCreateInfoKHR, SwapchainKHR,
     },
 };
-use log::error;
+use log::{error, warn};
 
 use crate::application::{core::error::ErrorCode, vulkan::types::VulkanContext};
 
@@ -65,6 +65,49 @@ impl VulkanContext<'_> {
             error!("Failed to create the base swapchain: {:?}", err);
             return Err(ErrorCode::InitializationFailure);
         }
+        Ok(())
+    }
+
+    pub fn swapchain_recreate(&mut self) -> Result<(), ErrorCode> {
+        warn!("Recreating the swapchain...");
+        self.device_wait_idle()?;
+
+        // Destroy the old swapchain
+        if let Err(err) = self.swapchain_destroy_base() {
+            error!(
+                "Failed to destroy previous swapchain when recreating a swapchain: {:?}",
+                err
+            );
+            return Err(ErrorCode::InitializationFailure);
+        }
+
+        // Recompute the framebuffer dimensions
+        if let Err(err) = self.init_framebuffer_dimensions() {
+            error!(
+                "Failed to recompute the framebuffer dimensions when recreating a swapchain: {:?}",
+                err
+            );
+            return Err(ErrorCode::InitializationFailure);
+        }
+
+        // Recreate a new swapchain
+        let new_width = self.framebuffer_width;
+        let new_height = self.framebuffer_height;
+        if let Err(err) = self.swapchain_create_base(new_width, new_height) {
+            error!("Failed to create a new swapchain: {:?}", err);
+            return Err(ErrorCode::InitializationFailure);
+        }
+
+        // Cleanup sync structures
+        if let Err(err) = self.clean_frames_sync_structures(){
+            error!("Failed to clean the sync structures when recreating the swapchain: {:?}", err);
+            return Err(ErrorCode::CleaningFailure);
+        }
+        if let Err(err) = self.init_frames_sync_structures(){
+            error!("Failed to initialize the sync structures when recreating the swapchain: {:?}", err);
+            return Err(ErrorCode::InitializationFailure);
+        }
+
         Ok(())
     }
 

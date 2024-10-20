@@ -8,6 +8,7 @@ use super::types::VulkanContext;
 impl VulkanContext<'_> {
     pub fn init(parameters: &ApplicationParameters, window: &Window) -> Result<Self, ErrorCode> {
         let mut context = Self::default();
+        context.parameters = parameters.clone();
 
         if let Err(err) = context.init_entry() {
             error!("Failed to initialize the vulkan entry: {:?}", err);
@@ -23,7 +24,7 @@ impl VulkanContext<'_> {
             debug!("Vulkan allocator initialized successfully !");
         }
 
-        if let Err(err) = context.init_instance(&parameters.window_title, window) {
+        if let Err(err) = context.init_instance(window) {
             error!("Failed to initialize the vulkan instance: {:?}", err);
             return Err(ErrorCode::InitializationFailure);
         } else {
@@ -81,9 +82,9 @@ impl VulkanContext<'_> {
             debug!("Vulkan logical device queues initialized successfully !");
         }
 
-        if let Err(err) = context.init_framebuffer_dimensions(parameters) {
+        if let Err(err) = context.init_framebuffer_dimensions() {
             error!(
-                "Failed to initialize the vulkan vulkan framebuffer dimensions: {:?}",
+                "Failed to initialize the vulkan framebuffer dimensions: {:?}",
                 err
             );
             return Err(ErrorCode::InitializationFailure);

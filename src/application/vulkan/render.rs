@@ -3,8 +3,7 @@ use ash::vk::{
     CommandBufferUsageFlags, Fence, ImageAspectFlags, ImageLayout, PipelineStageFlags2,
     PresentInfoKHR, SemaphoreSubmitInfo, SubmitInfo2,
 };
-use log::error;
-use winit::window::Window;
+use log::{error, warn};
 
 use crate::application::{
     core::error::ErrorCode,
@@ -15,11 +14,12 @@ use super::{
     descriptors_helper::images::{
         copy_image_to_image, get_default_image_subresource_range, transition_image,
     },
+    setup::frame_data::FRAME_OVERLAP,
     types::VulkanContext,
 };
 
 impl VulkanContext<'_> {
-    fn reset_render_fence(&self, timeout_in_ns: u64) -> Result<(), ErrorCode> {
+    fn wait_render_fence(&self, timeout_in_ns: u64) -> Result<(), ErrorCode> {
         let device = self.get_device()?;
         // Wait 1s for the GPU to have finished its work, and after it we reset the fence
         let render_fence = [self.get_current_frame()?.render_fence];
@@ -28,6 +28,15 @@ impl VulkanContext<'_> {
                 error!("Failed to wait for the render fence: {:?}", err);
                 return Err(ErrorCode::VulkanFailure);
             }
+        }
+        Ok(())
+    }
+     
+    fn reset_render_fence(&self) -> Result<(), ErrorCode> {
+        let device = self.get_device()?;
+        // Wait 1s for the GPU to have finished its work, and after it we reset the fence
+        let render_fence = [self.get_current_frame()?.render_fence];
+        unsafe {
             if let Err(err) = device.reset_fences(&render_fence) {
                 error!("Failed to reset the render fence: {:?}", err);
                 return Err(ErrorCode::VulkanFailure);
@@ -37,6 +46,8 @@ impl VulkanContext<'_> {
     }
 
     fn acquire_next_swapchain_image(&self, timeout_in_ns: u64) -> Result<(u32, bool), ErrorCode> {
+        // Return true if the swapchain is suboptimal
+
         // Request the image index from the swapchain
         // If the swapchain doesn’t have any image, block the thread
         let swapchain_handler = self.get_swapchain_handler()?;
@@ -49,7 +60,16 @@ impl VulkanContext<'_> {
                 Fence::null(),
             )
         } {
-            Ok((index, flag)) => Ok((index, flag)),
+            Ok((index, flag)) => {
+                if flag {
+                    warn!("The swapchain is suboptimal...");
+                };
+                Ok((index, flag))
+            }
+            Err(ash::vk::Result::ERROR_OUT_OF_DATE_KHR) => {
+                warn!("The swapchain is out of date...");
+                Ok((0, true))
+            }
             Err(err) => {
                 error!("Failed to acquire the next swapchain image: {:?}", err);
                 Err(ErrorCode::VulkanFailure)
@@ -62,10 +82,8 @@ impl VulkanContext<'_> {
         // First is the image, which is going to be our draw image
         let image = self.get_draw_image()?.image;
         // Then a clear color
-        let flash = ((self.frame_index as f32) / 120.).sin().abs();
-        // let flash = 1.;
         let clear_color = ClearColorValue {
-            float32: [0., 0., flash, 1.],
+            float32: [0., 0., 0., 1.],
         };
         // Finaly it needs a subresource range for what part of the image to clear
         // which we are going to use a default ImageSubresourceRange for
@@ -146,8 +164,14 @@ impl VulkanContext<'_> {
             ImageLayout::GENERAL,
         )?;
 
-        self.prepare_clear_screen_command()?;
-        self.prepare_raytracing_command(pipelines)?;
+        if let Err(err) = self.prepare_clear_screen_command() {
+            error!("Failed to prepare the clear screen command: {:?}", err);
+            return Err(ErrorCode::Unknown);
+        }
+        if let Err(err) = self.prepare_raytracing_command(pipelines) {
+            error!("Failed to prepare the raytracing command: {:?}", err);
+            return Err(ErrorCode::Unknown);
+        }
 
         // Transition the draw image and the swapchain image into their correct transfer layouts
         transition_image(
@@ -252,7 +276,7 @@ impl VulkanContext<'_> {
     fn present_frame_to_screen(&self, swapchain_next_index: u32) -> Result<(), ErrorCode> {
         // We will wait on the render semaphore, and connect it to our swapchain
         // This way, we wont be presenting the image to the screen until it has finished the rendering commands
-        //  from the submit right before it
+        // from the submit right before it
         let render_semaphores = [self.get_current_frame()?.render_semaphore];
 
         let swapchain_handler = self.get_swapchain_handler()?;
@@ -282,16 +306,67 @@ impl VulkanContext<'_> {
         Ok(())
     }
 
-    pub fn draw(&mut self, window: &Window, pipelines: &Pipelines) -> Result<(), ErrorCode> {
+    pub fn draw(&mut self, pipelines: &Pipelines) -> Result<(), ErrorCode> {
         let timeout_in_ns: u64 = 1_000_000_000;
-        self.reset_render_fence(timeout_in_ns)?;
+        if let Err(err) = self.wait_render_fence(timeout_in_ns){
+            error!("Failed to wait for a render fence when drawing: {:?}", err);
+            return Err(ErrorCode::Unknown);
+        }
+
         let (swapchain_next_index, is_swapchain_suboptimal) =
-            self.acquire_next_swapchain_image(timeout_in_ns)?;
-        self.update_draw_extent()?;
-        self.prepare_rendering_commands(swapchain_next_index as usize, pipelines)?;
-        self.submit_rendering_commands()?;
-        self.present_frame_to_screen(swapchain_next_index)?;
-        self.frame_index += 1;
+            match self.acquire_next_swapchain_image(timeout_in_ns) {
+                Ok((index, flag)) => (index, flag),
+                Err(err) => {
+                    error!(
+                        "Failed to acquire the next swapchain image when drawing: {:?}",
+                        err
+                    );
+                    return Err(ErrorCode::Unknown);
+                }
+            };
+        if is_swapchain_suboptimal {
+            if let Err(err) = self.swapchain_recreate() {
+                error!(
+                    "Failed to recreate a suboptimal swapchain when drawing: {:?}",
+                    err
+                );
+                return Err(ErrorCode::Unknown);
+            }
+            return Ok(());
+        }
+        // Only reset the fence if we are submitting work
+        if let Err(err) = self.reset_render_fence() {
+            error!("Failed to reset a render fence when drawing: {:?}", err);
+            return Err(ErrorCode::Unknown);
+        }
+
+        if let Err(err) = self.update_draw_extent() {
+            error!("Failed to update the draw extent when drawing: {:?}", err);
+            return Err(ErrorCode::Unknown);
+        }
+        if let Err(err) = self.prepare_rendering_commands(swapchain_next_index as usize, pipelines)
+        {
+            error!(
+                "Failed to prepare the rendering commands when drawing: {:?}",
+                err
+            );
+            return Err(ErrorCode::Unknown);
+        }
+        if let Err(err) = self.submit_rendering_commands() {
+            error!(
+                "Failed to submit the rendering commands when drawing: {:?}",
+                err
+            );
+            return Err(ErrorCode::Unknown);
+        }
+        if let Err(err) = self.present_frame_to_screen(swapchain_next_index) {
+            error!(
+                "Failed to present the frame to the screen when drawing: {:?}",
+                err
+            );
+            return Err(ErrorCode::Unknown);
+        }
+        self.frame_index = (self.frame_index + 1) % FRAME_OVERLAP;
         Ok(())
     }
 }

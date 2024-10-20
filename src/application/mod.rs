@@ -1,10 +1,7 @@
 use core::error::ErrorCode;
 
-use ::winit::{
-    event::{Event, WindowEvent},
-    window::Window,
-};
-use log::{debug, error};
+use ::winit::event::{Event, WindowEvent};
+use log::{debug, error, warn};
 use parameters::ApplicationParameters;
 use pipelines::Pipelines;
 use scene::Scene;
@@ -21,12 +18,8 @@ pub struct Application;
 
 impl Application {
     /// Render
-    fn render(
-        vulkan_context: &mut VulkanContext,
-        window: &Window,
-        pipelines: &Pipelines,
-    ) -> Result<(), ErrorCode> {
-        if let Err(err) = vulkan_context.draw(window, pipelines) {
+    fn render(vulkan_context: &mut VulkanContext, pipelines: &Pipelines) -> Result<(), ErrorCode> {
+        if let Err(err) = vulkan_context.draw(pipelines) {
             error!("The vulkan context failed to draw stuff: {:?}", err);
             return Err(ErrorCode::VulkanFailure);
         }
@@ -95,7 +88,15 @@ impl Application {
                     ..
                 } => {
                     elwt.exit();
-                }
+                },
+                Event::WindowEvent {
+                    event: WindowEvent::Resized(new_physical_size),
+                    ..
+                } => {
+                    vulkan_context.parameters.window_width = new_physical_size.width as u16;
+                    vulkan_context.parameters.window_height = new_physical_size.height as u16;
+                    warn!("The window has been resized...");
+                },
                 Event::AboutToWait => {
                     window.request_redraw();
                 }
@@ -103,8 +104,7 @@ impl Application {
                     event: WindowEvent::RedrawRequested,
                     ..
                 } => {
-                    if let Err(err) = Application::render(&mut vulkan_context, &window, &pipelines)
-                    {
+                    if let Err(err) = Application::render(&mut vulkan_context, &pipelines) {
                         panic!("Failed to render the application: {:?}", err);
                     }
                 }

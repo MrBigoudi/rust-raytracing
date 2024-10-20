@@ -7,6 +7,8 @@ use ash::{
     Device, Entry, Instance,
 };
 
+use crate::application::parameters::ApplicationParameters;
+
 use super::setup::{
     allocator::AllocatorWrapper,
     devices::{device_requirements::DeviceRequirements, physical_device::PhysicalDeviceInfo},
@@ -17,6 +19,8 @@ use super::setup::{
 
 #[derive(Default)]
 pub struct VulkanContext<'a> {
+    pub parameters: ApplicationParameters,
+
     pub entry: Option<Entry>,
     pub allocation_callback: Option<&'a AllocationCallbacks<'a>>,
     pub instance: Option<Instance>,
