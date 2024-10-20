@@ -88,7 +88,7 @@ impl Application {
                     ..
                 } => {
                     elwt.exit();
-                },
+                }
                 Event::WindowEvent {
                     event: WindowEvent::Resized(new_physical_size),
                     ..
@@ -96,7 +96,7 @@ impl Application {
                     vulkan_context.parameters.window_width = new_physical_size.width as u16;
                     vulkan_context.parameters.window_height = new_physical_size.height as u16;
                     warn!("The window has been resized...");
-                },
+                }
                 Event::AboutToWait => {
                     window.request_redraw();
                 }

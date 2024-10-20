@@ -6,10 +6,12 @@ use log::error;
 
 use crate::application::{core::error::ErrorCode, vulkan::types::VulkanContext};
 
-use super::{frame_data::{VulkanFrameData, FRAME_OVERLAP}, sync_structures::SyncStructures};
+use super::{
+    frame_data::{VulkanFrameData, FRAME_OVERLAP},
+    sync_structures::SyncStructures,
+};
 
 impl VulkanContext<'_> {
-
     pub fn init_commands(&mut self) -> Result<(), ErrorCode> {
         // Create a command pool for commands submitted to the graphics queue
         let graphics_commands_pool_info = CommandPoolCreateInfo::default()
@@ -51,10 +53,19 @@ impl VulkanContext<'_> {
             let device = self.get_device()?;
             let allocation_callback = self.get_allocation_callback()?;
             let fence_create_info = FenceCreateInfo::default().flags(FenceCreateFlags::SIGNALED);
-            let render_fence = SyncStructures::init_fence(&fence_create_info, device, allocation_callback)?;
+            let render_fence =
+                SyncStructures::init_fence(&fence_create_info, device, allocation_callback)?;
             let semaphore_create_info = SemaphoreCreateInfo::default();
-            let swapchain_semaphore = SyncStructures::init_semaphore(&semaphore_create_info, device, allocation_callback)?;
-            let render_semaphore = SyncStructures::init_semaphore(&semaphore_create_info, device, allocation_callback)?;
+            let swapchain_semaphore = SyncStructures::init_semaphore(
+                &semaphore_create_info,
+                device,
+                allocation_callback,
+            )?;
+            let render_semaphore = SyncStructures::init_semaphore(
+                &semaphore_create_info,
+                device,
+                allocation_callback,
+            )?;
 
             let new_frame = VulkanFrameData {
                 command_pool,

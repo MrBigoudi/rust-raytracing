@@ -7,9 +7,13 @@ impl VulkanContext<'_> {
         let width = self.parameters.window_width as u32;
         let height = self.parameters.window_height as u32;
         // Clamp framebuffer to swapchain surface capacity
-        let swapchain_support_max_extent = self.get_swapchain_support_surface_capabilities()?.max_image_extent;
-        let swapchain_support_min_extent = self.get_swapchain_support_surface_capabilities()?.min_image_extent;
-        
+        let swapchain_support_max_extent = self
+            .get_swapchain_support_surface_capabilities()?
+            .max_image_extent;
+        let swapchain_support_min_extent = self
+            .get_swapchain_support_surface_capabilities()?
+            .min_image_extent;
+
         self.framebuffer_width = min(
             swapchain_support_max_extent.width,
             max(swapchain_support_min_extent.width, width),

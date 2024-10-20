@@ -1,4 +1,10 @@
-use ash::{vk::{AllocationCallbacks, CommandBuffer, CommandPool, Fence, FenceCreateFlags, FenceCreateInfo, Semaphore, SemaphoreCreateInfo}, Device};
+use ash::{
+    vk::{
+        AllocationCallbacks, CommandBuffer, CommandPool, Fence, FenceCreateFlags, FenceCreateInfo,
+        Semaphore, SemaphoreCreateInfo,
+    },
+    Device,
+};
 
 use crate::application::{core::error::ErrorCode, vulkan::types::VulkanContext};
 
@@ -19,7 +25,11 @@ pub struct VulkanFrameData {
 }
 
 impl VulkanFrameData {
-    pub fn clean_sync_structures(&self, device: &Device, allocation_callback: Option<&AllocationCallbacks>) -> Result<(), ErrorCode> {
+    pub fn clean_sync_structures(
+        &self,
+        device: &Device,
+        allocation_callback: Option<&AllocationCallbacks>,
+    ) -> Result<(), ErrorCode> {
         unsafe { device.destroy_fence(self.render_fence, allocation_callback) };
         unsafe { device.destroy_semaphore(self.swapchain_semaphore, allocation_callback) };
         unsafe { device.destroy_semaphore(self.render_semaphore, allocation_callback) };
@@ -51,10 +61,19 @@ impl VulkanContext<'_> {
 
         for _ in 0..FRAME_OVERLAP {
             let fence_create_info = FenceCreateInfo::default().flags(FenceCreateFlags::SIGNALED);
-            let render_fence = SyncStructures::init_fence(&fence_create_info, device, allocation_callback)?;
+            let render_fence =
+                SyncStructures::init_fence(&fence_create_info, device, allocation_callback)?;
             let semaphore_create_info = SemaphoreCreateInfo::default();
-            let swapchain_semaphore = SyncStructures::init_semaphore(&semaphore_create_info, device, allocation_callback)?;
-            let render_semaphore = SyncStructures::init_semaphore(&semaphore_create_info, device, allocation_callback)?;
+            let swapchain_semaphore = SyncStructures::init_semaphore(
+                &semaphore_create_info,
+                device,
+                allocation_callback,
+            )?;
+            let render_semaphore = SyncStructures::init_semaphore(
+                &semaphore_create_info,
+                device,
+                allocation_callback,
+            )?;
 
             render_fences.push(render_fence);
             swapchain_semaphores.push(swapchain_semaphore);

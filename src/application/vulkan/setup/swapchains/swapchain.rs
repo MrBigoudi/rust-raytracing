@@ -99,12 +99,18 @@ impl VulkanContext<'_> {
         }
 
         // Cleanup sync structures
-        if let Err(err) = self.clean_frames_sync_structures(){
-            error!("Failed to clean the sync structures when recreating the swapchain: {:?}", err);
+        if let Err(err) = self.clean_frames_sync_structures() {
+            error!(
+                "Failed to clean the sync structures when recreating the swapchain: {:?}",
+                err
+            );
             return Err(ErrorCode::CleaningFailure);
         }
-        if let Err(err) = self.init_frames_sync_structures(){
-            error!("Failed to initialize the sync structures when recreating the swapchain: {:?}", err);
+        if let Err(err) = self.init_frames_sync_structures() {
+            error!(
+                "Failed to initialize the sync structures when recreating the swapchain: {:?}",
+                err
+            );
             return Err(ErrorCode::InitializationFailure);
         }
 

@@ -7,8 +7,10 @@ use super::types::VulkanContext;
 
 impl VulkanContext<'_> {
     pub fn init(parameters: &ApplicationParameters, window: &Window) -> Result<Self, ErrorCode> {
-        let mut context = Self::default();
-        context.parameters = parameters.clone();
+        let mut context = VulkanContext{
+            parameters: parameters.clone(),
+            ..Self::default()
+        };
 
         if let Err(err) = context.init_entry() {
             error!("Failed to initialize the vulkan entry: {:?}", err);

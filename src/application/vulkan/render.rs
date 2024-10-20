@@ -31,7 +31,7 @@ impl VulkanContext<'_> {
         }
         Ok(())
     }
-     
+
     fn reset_render_fence(&self) -> Result<(), ErrorCode> {
         let device = self.get_device()?;
         // Wait 1s for the GPU to have finished its work, and after it we reset the fence
@@ -308,7 +308,7 @@ impl VulkanContext<'_> {
 
     pub fn draw(&mut self, pipelines: &Pipelines) -> Result<(), ErrorCode> {
         let timeout_in_ns: u64 = 1_000_000_000;
-        if let Err(err) = self.wait_render_fence(timeout_in_ns){
+        if let Err(err) = self.wait_render_fence(timeout_in_ns) {
             error!("Failed to wait for a render fence when drawing: {:?}", err);
             return Err(ErrorCode::Unknown);
         }
