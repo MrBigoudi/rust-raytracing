@@ -1,7 +1,8 @@
 use core::error::ErrorCode;
 
-use ::winit::event::{Event, WindowEvent};
-use log::{debug, error, warn};
+use window::init::WindowContext;
+use winit::{event_loop::{ActiveEventLoop, ControlFlow, EventLoop}, window::Window};
+use log::{debug, error};
 use parameters::ApplicationParameters;
 use pipelines::Pipelines;
 use scene::Scene;
@@ -12,46 +13,34 @@ mod parameters;
 mod pipelines;
 mod scene;
 mod vulkan;
-mod winit;
+mod window;
+mod handler;
 
-pub struct Application;
+#[derive(Default)]
+pub struct Application<'a> {
+    parameters: ApplicationParameters,
+    window: Option<Window>,
+    vulkan_context: Option<VulkanContext<'a>>,
+    scene: Option<Scene>,
+    pipelines: Option<Pipelines>,
+}
 
-impl Application {
-    /// Render
-    fn render(vulkan_context: &mut VulkanContext, pipelines: &Pipelines) -> Result<(), ErrorCode> {
-        if let Err(err) = vulkan_context.draw(pipelines) {
-            error!("The vulkan context failed to draw stuff: {:?}", err);
-            return Err(ErrorCode::VulkanFailure);
-        }
-        Ok(())
-    }
-
-    /// Init, run, and clean the application
-    pub fn run() -> Result<(), ErrorCode> {
-        // Initialize the application
+impl Application<'_> {
+    fn init(&mut self, event_loop: &ActiveEventLoop) -> Result<(), ErrorCode> {
         debug!("Initializing parameters...");
         let parameters = ApplicationParameters::default();
 
-        debug!("Initializing the event loop...");
-        let event_loop = match Self::init_event_loop() {
-            Ok(event_loop) => event_loop,
-            Err(err) => {
-                error!("Failed to initialize the event loop: {:?}", err);
-                return Err(ErrorCode::InitializationFailure);
-            }
-        };
-
         debug!("Initializing the window...");
-        let window = match Self::init_window(&parameters, &event_loop) {
-            Ok(event_loop) => event_loop,
+        let window = match WindowContext::init(&parameters, event_loop){
+            Ok(window) => window,
             Err(err) => {
-                error!("Failed to initialize the event loop: {:?}", err);
+                error!("Failed to initialize the application window: {:?}", err);
                 return Err(ErrorCode::InitializationFailure);
             }
         };
 
         debug!("Initializing the vulkan context...");
-        let mut vulkan_context = match VulkanContext::init(&parameters, &window) {
+        let vulkan_context = match VulkanContext::init(&parameters, &window) {
             Ok(vulkan_context) => vulkan_context,
             Err(err) => {
                 error!("Failed to initialize the vulkan context: {:?}", err);
@@ -59,8 +48,11 @@ impl Application {
             }
         };
 
+        debug!("Initializing the scene...");
+        let scene = Scene::default();
+
         debug!("Initializing the pipelines...");
-        let pipelines = match Pipelines::init(&vulkan_context, &Scene::default()) {
+        let pipelines = match Pipelines::init(&vulkan_context, &scene) {
             Ok(pipelines) => pipelines,
             Err(err) => {
                 error!("Failed to initialize the pipelines: {:?}", err);
@@ -68,54 +60,29 @@ impl Application {
             }
         };
 
-        // Main loop
-        if let Err(err) = event_loop.run(move |event, elwt| {
-            match event {
-                Event::LoopExiting => {
-                    if let Err(err) = pipelines.clean(&vulkan_context) {
-                        panic!("Failed to clean the pipelines: {:?}", err);
-                    } else {
-                        debug!("Pipelines cleaned successfully !");
-                    }
-                    if let Err(err) = vulkan_context.clean() {
-                        panic!("Failed to clean the vulkan context: {:?}", err);
-                    } else {
-                        debug!("Vulkan context cleaned successfully !");
-                    }
-                }
-                Event::WindowEvent {
-                    event: WindowEvent::CloseRequested,
-                    ..
-                } => {
-                    elwt.exit();
-                }
-                Event::WindowEvent {
-                    event: WindowEvent::Resized(new_physical_size),
-                    ..
-                } => {
-                    vulkan_context.parameters.window_width = new_physical_size.width as u16;
-                    vulkan_context.parameters.window_height = new_physical_size.height as u16;
-                    warn!("The window has been resized...");
-                }
-                Event::AboutToWait => {
-                    window.request_redraw();
-                }
-                Event::WindowEvent {
-                    event: WindowEvent::RedrawRequested,
-                    ..
-                } => {
-                    if let Err(err) = Application::render(&mut vulkan_context, &pipelines) {
-                        panic!("Failed to render the application: {:?}", err);
-                    }
-                }
-                _ => (),
-            };
-            // if let Err(err) = Application::input_handler(&event, elwt) {
-            //     error!("Failed to handle inputs in the application: {:?}", err);
-            //     panic!();
-            // }
-        }) {
-            error!("An error occured during the main loop: {:?}", err);
+        self.parameters = parameters;
+        self.window = Some(window);
+        self.vulkan_context = Some(vulkan_context);
+        self.scene = Some(scene);
+        self.pipelines = Some(pipelines);
+
+        Ok(())
+    }
+
+    pub fn run() -> Result<(), ErrorCode> {
+        debug!("Initializing the event loop...");
+        let event_loop = match EventLoop::new(){
+            Ok(event_loop) => event_loop,
+            Err(err) => {
+                error!("Failed to initialize the event loop: {:?}", err);
+                return Err(ErrorCode::InitializationFailure);
+            }
+        };
+        event_loop.set_control_flow(ControlFlow::Poll);
+
+        let mut app = Application::default();
+        if let Err(err) = event_loop.run_app(&mut app){
+            error!("An error occured during the main event loop: {:?}", err);
             return Err(ErrorCode::Unknown);
         }
 

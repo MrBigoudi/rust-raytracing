@@ -1,18 +1,14 @@
 use log::error;
 use winit::{
-    dpi::{LogicalSize, PhysicalSize, Position},
-    event_loop::EventLoop,
-    window::{Window, WindowBuilder},
+    dpi::{LogicalSize, PhysicalSize, Position}, event_loop::ActiveEventLoop, window::Window
 };
 
-use crate::application::{core::error::ErrorCode, parameters::ApplicationParameters, Application};
+use crate::application::{core::error::ErrorCode, parameters::ApplicationParameters};
 
-impl Application {
-    /// Initializes the window with given application parameters and event loop
-    pub fn init_window(
-        parameters: &ApplicationParameters,
-        event_loop: &EventLoop<()>,
-    ) -> Result<Window, ErrorCode> {
+pub struct WindowContext;
+
+impl WindowContext{
+    pub fn init(parameters: &ApplicationParameters, event_loop: &ActiveEventLoop) -> Result<Window, ErrorCode> {
         let primary_monitor = event_loop.primary_monitor().unwrap();
         let scale_factor = primary_monitor.scale_factor();
 
@@ -31,16 +27,16 @@ impl Application {
         let pos_y = (monitor_height - logical_height * scale_factor) / 2.0;
         let position = Position::new(Position::Physical((pos_x, pos_y).into()));
 
-        match WindowBuilder::new()
+        let window_attributes = Window::default_attributes()
             .with_title(&parameters.window_title)
-            .with_resizable(false)
-            .with_inner_size(window_size)
             .with_position(position)
-            .build(event_loop)
-        {
+            .with_inner_size(window_size)
+        ;
+
+        match event_loop.create_window(window_attributes){
             Ok(window) => Ok(window),
             Err(err) => {
-                error!("Failed to initialize the window: {:?}", err);
+                error!("Failed to create a winit window: {:?}", err);
                 Err(ErrorCode::InitializationFailure)
             }
         }

@@ -9,13 +9,13 @@ use ash::{
 
 use crate::application::parameters::ApplicationParameters;
 
-use super::setup::{
+use super::{gui::GuiWrapper, setup::{
     allocator::AllocatorWrapper,
     devices::{device_requirements::DeviceRequirements, physical_device::PhysicalDeviceInfo},
     draw_resources::AllocatedImage,
     frame_data::VulkanFrameData,
     swapchains::swapchain::SwapchainHandler,
-};
+}};
 
 #[derive(Default)]
 pub struct VulkanContext<'a> {
@@ -47,4 +47,6 @@ pub struct VulkanContext<'a> {
 
     pub draw_image: Option<AllocatedImage>,
     pub draw_extent: Extent2D,
+
+    pub gui: Option<GuiWrapper>,
 }
