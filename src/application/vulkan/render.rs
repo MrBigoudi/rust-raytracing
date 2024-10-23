@@ -214,7 +214,7 @@ impl VulkanContext<'_> {
         )?;
 
         {
-            if let Err(err) = self.draw_gui(window, swapchain_next_index){
+            if let Err(err) = self.draw_gui(window, swapchain_next_index) {
                 error!("Failed to render the gui: {:?}", err);
                 return Err(ErrorCode::Unknown);
             }
@@ -365,7 +365,8 @@ impl VulkanContext<'_> {
             error!("Failed to update the draw extent when drawing: {:?}", err);
             return Err(ErrorCode::Unknown);
         }
-        if let Err(err) = self.prepare_rendering_commands(swapchain_next_index as usize, pipelines, window)
+        if let Err(err) =
+            self.prepare_rendering_commands(swapchain_next_index as usize, pipelines, window)
         {
             error!(
                 "Failed to prepare the rendering commands when drawing: {:?}",

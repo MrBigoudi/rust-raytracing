@@ -20,6 +20,7 @@ pub struct PhysicalDeviceInfo {
     pub properties: PhysicalDeviceProperties,
     pub features: PhysicalDeviceFeatures,
     pub extension_properties: Vec<ExtensionProperties>,
+    #[allow(dead_code)]
     pub memory_properties: PhysicalDeviceMemoryProperties,
     pub depth_format: Option<Format>,
 }

@@ -1,14 +1,18 @@
-use ash::vk::{CommandBuffer, CommandBufferAllocateInfo, CommandBufferBeginInfo, CommandBufferResetFlags, CommandBufferSubmitInfo, CommandBufferUsageFlags, CommandPool, CommandPoolCreateFlags, CommandPoolCreateInfo, Fence, FenceCreateFlags, FenceCreateInfo, SubmitInfo2};
+use ash::vk::{
+    CommandBuffer, CommandBufferAllocateInfo, CommandBufferBeginInfo, CommandBufferResetFlags,
+    CommandBufferSubmitInfo, CommandBufferUsageFlags, CommandPool, CommandPoolCreateFlags,
+    CommandPoolCreateInfo, Fence, FenceCreateFlags, FenceCreateInfo, SubmitInfo2,
+};
 use log::error;
 
 use crate::application::core::error::ErrorCode;
 
 use super::types::VulkanContext;
 
-/// Uses a fence and a different command buffer from the one we use on draws 
+/// Uses a fence and a different command buffer from the one we use on draws
 /// to send some commands to the GPU without syncronizing with swapchain or with rendering logic
 #[derive(Default)]
-pub struct Immediate{
+pub struct Immediate {
     pub command_pool: CommandPool,
     pub command_buffer: CommandBuffer,
     pub fence: Fence,
@@ -16,49 +20,58 @@ pub struct Immediate{
 
 impl Immediate {
     fn init_command_pool(vulkan_context: &VulkanContext<'_>) -> Result<CommandPool, ErrorCode> {
-        let graphics_queue_index = vulkan_context.get_queues()?.graphics_family_index.unwrap() as u32;
+        let graphics_queue_index =
+            vulkan_context.get_queues()?.graphics_family_index.unwrap() as u32;
         let command_pool_info = CommandPoolCreateInfo::default()
             .queue_family_index(graphics_queue_index)
-            .flags(CommandPoolCreateFlags::empty())
-        ;
+            .flags(CommandPoolCreateFlags::empty());
         let device = vulkan_context.get_device()?;
         let allocation_callback = vulkan_context.get_allocation_callback()?;
-        match unsafe {device.create_command_pool(&command_pool_info, allocation_callback)}{
+        match unsafe { device.create_command_pool(&command_pool_info, allocation_callback) } {
             Ok(pool) => Ok(pool),
             Err(err) => {
-                error!("Failed to create the command pool for an immediate structure: {:?}", err);
+                error!(
+                    "Failed to create the command pool for an immediate structure: {:?}",
+                    err
+                );
                 Err(ErrorCode::VulkanFailure)
             }
         }
     }
 
-    fn init_command_buffer(vulkan_context: &VulkanContext<'_>, command_pool: &CommandPool) -> Result<CommandBuffer, ErrorCode> {
+    fn init_command_buffer(
+        vulkan_context: &VulkanContext<'_>,
+        command_pool: &CommandPool,
+    ) -> Result<CommandBuffer, ErrorCode> {
         let command_buffer_allocate_info = CommandBufferAllocateInfo::default()
             .command_buffer_count(1)
-            .command_pool(*command_pool)
-        ;
+            .command_pool(*command_pool);
         let device = vulkan_context.get_device()?;
-        match unsafe {device.allocate_command_buffers(&command_buffer_allocate_info)}{
+        match unsafe { device.allocate_command_buffers(&command_buffer_allocate_info) } {
             Ok(buffer) => Ok(buffer[0]),
             Err(err) => {
-                error!("Failed to allocate the command buffer for an immediate structure: {:?}", err);
+                error!(
+                    "Failed to allocate the command buffer for an immediate structure: {:?}",
+                    err
+                );
                 Err(ErrorCode::VulkanFailure)
             }
         }
     }
 
     fn init_fence(vulkan_context: &VulkanContext<'_>) -> Result<Fence, ErrorCode> {
-        let fence_create_info = FenceCreateInfo::default()
-            .flags(FenceCreateFlags::SIGNALED)
-        ;
+        let fence_create_info = FenceCreateInfo::default().flags(FenceCreateFlags::SIGNALED);
         let device = vulkan_context.get_device()?;
         let allocation_callback = vulkan_context.get_allocation_callback()?;
-        match unsafe{device.create_fence(&fence_create_info, allocation_callback)}{
+        match unsafe { device.create_fence(&fence_create_info, allocation_callback) } {
             Ok(fence) => Ok(fence),
             Err(err) => {
-                error!("Failed to create the fence for an immediate structure: {:?}", err);
+                error!(
+                    "Failed to create the fence for an immediate structure: {:?}",
+                    err
+                );
                 Err(ErrorCode::VulkanFailure)
-            },
+            }
         }
     }
 
@@ -67,7 +80,7 @@ impl Immediate {
         let command_buffer = Immediate::init_command_buffer(vulkan_context, &command_pool)?;
         let fence = Immediate::init_fence(vulkan_context)?;
 
-        Ok(Immediate{
+        Ok(Immediate {
             command_pool,
             command_buffer,
             fence,
@@ -84,24 +97,40 @@ impl Immediate {
         Ok(())
     }
 
-    pub fn submit(&self, vulkan_context: &VulkanContext<'_>, fct: &dyn Fn(&VulkanContext<'_>, CommandBuffer) -> Result<(), ErrorCode>) -> Result<(), ErrorCode> {
+    pub fn submit(
+        &self,
+        vulkan_context: &VulkanContext<'_>,
+        fct: &dyn Fn(&VulkanContext<'_>, CommandBuffer) -> Result<(), ErrorCode>,
+    ) -> Result<(), ErrorCode> {
         let device = vulkan_context.get_device()?;
-        if let Err(err) = unsafe{device.reset_fences(&[self.fence])}{
-            error!("Failed to reset the fence when submitting an immediate structure: {:?}", err);
+        if let Err(err) = unsafe { device.reset_fences(&[self.fence]) } {
+            error!(
+                "Failed to reset the fence when submitting an immediate structure: {:?}",
+                err
+            );
             return Err(ErrorCode::VulkanFailure);
         }
-        if let Err(err) = unsafe{device.reset_command_buffer(self.command_buffer, CommandBufferResetFlags::empty())}{
-            error!("Failed to reset the command buffer when submitting an immediate structure: {:?}", err);
+        if let Err(err) = unsafe {
+            device.reset_command_buffer(self.command_buffer, CommandBufferResetFlags::empty())
+        } {
+            error!(
+                "Failed to reset the command buffer when submitting an immediate structure: {:?}",
+                err
+            );
             return Err(ErrorCode::VulkanFailure);
         }
 
         let command_buffer = self.command_buffer;
-        let command_buffer_begin_info = CommandBufferBeginInfo::default()
-            .flags(CommandBufferUsageFlags::ONE_TIME_SUBMIT)
-        ;
+        let command_buffer_begin_info =
+            CommandBufferBeginInfo::default().flags(CommandBufferUsageFlags::ONE_TIME_SUBMIT);
 
-        if let Err(err) = unsafe{device.begin_command_buffer(command_buffer, &command_buffer_begin_info)}{
-            error!("Failed to begin the command buffer when submitting an immediate structure: {:?}", err);
+        if let Err(err) =
+            unsafe { device.begin_command_buffer(command_buffer, &command_buffer_begin_info) }
+        {
+            error!(
+                "Failed to begin the command buffer when submitting an immediate structure: {:?}",
+                err
+            );
             return Err(ErrorCode::VulkanFailure);
         }
 
@@ -110,30 +139,39 @@ impl Immediate {
             return Err(ErrorCode::Unknown);
         }
 
-        if let Err(err) = unsafe{device.end_command_buffer(command_buffer)}{
-            error!("Failed to end the command buffer when submitting an immediate structure: {:?}", err);
+        if let Err(err) = unsafe { device.end_command_buffer(command_buffer) } {
+            error!(
+                "Failed to end the command buffer when submitting an immediate structure: {:?}",
+                err
+            );
             return Err(ErrorCode::VulkanFailure);
         }
 
-        let command_buffer_submit_info = [CommandBufferSubmitInfo::default()
-            .command_buffer(command_buffer),
-        ];
-        let submit_info = [SubmitInfo2::default()
-            .command_buffer_infos(&command_buffer_submit_info),
-        ];
+        let command_buffer_submit_info =
+            [CommandBufferSubmitInfo::default().command_buffer(command_buffer)];
+        let submit_info =
+            [SubmitInfo2::default().command_buffer_infos(&command_buffer_submit_info)];
 
         // Submit command buffer to the queue and execute it
         // the render fence will now block until the graphic commands finish execution
         let graphics_queue = vulkan_context.get_queues()?.graphics_queue.unwrap();
-        if let Err(err) = unsafe{device.queue_submit2(graphics_queue, &submit_info, self.fence)}{
-            error!("Failed to submit the command buffer when submitting an immediate structure: {:?}", err);
+        if let Err(err) = unsafe { device.queue_submit2(graphics_queue, &submit_info, self.fence) }
+        {
+            error!(
+                "Failed to submit the command buffer when submitting an immediate structure: {:?}",
+                err
+            );
             return Err(ErrorCode::VulkanFailure);
         }
 
         let timeout = 1e9 as u64;
         let should_wait_all = true;
-        if let Err(err) = unsafe{device.wait_for_fences(&[self.fence], should_wait_all, timeout)}{
-            error!("Failed to wait for fences when submitting an immediate structure: {:?}", err);
+        if let Err(err) = unsafe { device.wait_for_fences(&[self.fence], should_wait_all, timeout) }
+        {
+            error!(
+                "Failed to wait for fences when submitting an immediate structure: {:?}",
+                err
+            );
             return Err(ErrorCode::VulkanFailure);
         }
 

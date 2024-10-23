@@ -12,6 +12,7 @@ pub struct AllocatedImage {
     pub image: Image,
     pub image_view: ImageView,
     pub image_extent: Extent3D,
+    #[allow(dead_code)]
     pub image_format: Format,
     pub allocation: Allocation,
 }

@@ -1,11 +1,18 @@
 use std::{cmp::Ordering, sync::Arc, time::Duration};
 
-use ash::vk::{AttachmentLoadOp, AttachmentStoreOp, DescriptorPool, DescriptorPoolCreateFlags, DescriptorPoolCreateInfo, DescriptorPoolSize, DescriptorType, ImageLayout, Offset2D, Rect2D, RenderingAttachmentInfo, RenderingInfo};
+use ash::vk::{
+    AttachmentLoadOp, AttachmentStoreOp, DescriptorPool, DescriptorPoolCreateFlags,
+    DescriptorPoolCreateInfo, DescriptorPoolSize, DescriptorType, ImageLayout, Offset2D, Rect2D,
+    RenderingAttachmentInfo, RenderingInfo,
+};
 use imgui::*;
 use imgui_rs_vulkan_renderer::*;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use log::error;
-use winit::{event::{DeviceEvent, ElementState, MouseScrollDelta, TouchPhase, WindowEvent}, window::Window};
+use winit::{
+    event::{DeviceEvent, ElementState, MouseScrollDelta, TouchPhase, WindowEvent},
+    window::Window,
+};
 
 use crate::application::{core::error::ErrorCode, window::key_map::winit_character_to_imgui_key};
 
@@ -62,12 +69,13 @@ impl VulkanContext<'_> {
         let descriptor_pool_create_info = DescriptorPoolCreateInfo::default()
             .flags(DescriptorPoolCreateFlags::FREE_DESCRIPTOR_SET)
             .max_sets(1000)
-            .pool_sizes(&descriptor_pool_sizes)
-        ;
+            .pool_sizes(&descriptor_pool_sizes);
 
         let device = self.get_device()?;
         let allocation_callback = self.get_allocation_callback()?;
-        let descriptor_pool = match unsafe { device.create_descriptor_pool(&descriptor_pool_create_info, allocation_callback) }{
+        let descriptor_pool = match unsafe {
+            device.create_descriptor_pool(&descriptor_pool_create_info, allocation_callback)
+        } {
             Ok(pool) => pool,
             Err(err) => {
                 error!("Failed to create a descriptor pool for the gui: {:?}", err);
@@ -85,7 +93,7 @@ impl VulkanContext<'_> {
         unsafe {
             device.destroy_descriptor_pool(gui.descriptor_pool, allocation_callback);
         }
-        gui.immediate.clean(&self)?;
+        gui.immediate.clean(self)?;
         self.gui.context = None;
         self.gui.platform = None;
         self.gui.renderer = None;
@@ -98,7 +106,7 @@ impl VulkanContext<'_> {
 
     pub fn init_gui(&mut self, window: &Window) -> Result<(), ErrorCode> {
         let descriptor_pool = self.init_gui_descriptor_pool()?;
-        let immediate = Immediate::init(&self)?;
+        let immediate = Immediate::init(self)?;
 
         let mut context = Context::create();
         context.set_ini_filename(None);
@@ -107,16 +115,14 @@ impl VulkanContext<'_> {
         let hidpi_factor = platform.hidpi_factor();
         let font_size = (13. * hidpi_factor) as f32;
 
-        context.fonts().add_font(&[
-            FontSource::DefaultFontData {
-                config: Some(FontConfig {
-                    size_pixels: font_size,
-                    ..FontConfig::default()
-                }),
-            },
-        ]);
+        context.fonts().add_font(&[FontSource::DefaultFontData {
+            config: Some(FontConfig {
+                size_pixels: font_size,
+                ..FontConfig::default()
+            }),
+        }]);
         context.io_mut().font_global_scale = (1.0 / hidpi_factor) as f32;
-        platform.attach_window(context.io_mut(), &window, HiDpiMode::Rounded);
+        platform.attach_window(context.io_mut(), window, HiDpiMode::Rounded);
 
         platform.attach_window(
             context.io_mut(),
@@ -161,40 +167,46 @@ impl VulkanContext<'_> {
         Ok(())
     }
 
-    fn prepare_gui_draw_cmd(&self, swapchain_next_index: usize) -> Result<(), ErrorCode>{
+    fn prepare_gui_draw_cmd(&self, swapchain_next_index: usize) -> Result<(), ErrorCode> {
         let swapchain = self.get_swapchain_handler()?;
         let image_view = self.get_swapchain_handler()?.image_views[swapchain_next_index];
-        let rendering_attachement_info = [
-            RenderingAttachmentInfo::default()
-                .image_view(image_view)
-                .image_layout(ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
-                .load_op(AttachmentLoadOp::LOAD)
-                .store_op(AttachmentStoreOp::STORE),
-        ];
+        let rendering_attachement_info = [RenderingAttachmentInfo::default()
+            .image_view(image_view)
+            .image_layout(ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
+            .load_op(AttachmentLoadOp::LOAD)
+            .store_op(AttachmentStoreOp::STORE)];
 
         let render_area = Rect2D {
-            offset: Offset2D{x:0, y:0},
+            offset: Offset2D { x: 0, y: 0 },
             extent: swapchain.extent,
         };
 
         let rendering_info = RenderingInfo::default()
             .render_area(render_area)
             .color_attachments(&rendering_attachement_info)
-            .layer_count(1)
-        ;
+            .layer_count(1);
 
         let device = self.get_device()?;
         let main_command_buffer = self.get_current_frame()?.main_command_buffer;
-        unsafe{device.cmd_begin_rendering(main_command_buffer, &rendering_info)};
+        unsafe { device.cmd_begin_rendering(main_command_buffer, &rendering_info) };
         Ok(())
     }
 
-    pub fn draw_gui(&mut self, window: &Window, swapchain_next_index: usize) -> Result<(), ErrorCode> {
+    pub fn draw_gui(
+        &mut self,
+        window: &Window,
+        swapchain_next_index: usize,
+    ) -> Result<(), ErrorCode> {
         self.prepare_gui_draw_cmd(swapchain_next_index)?;
 
         // Generate UI
-        if let Err(err) = self.gui.platform.as_mut().unwrap().prepare_frame(
-            self.gui.context.as_mut().unwrap().io_mut(), window){
+        if let Err(err) = self
+            .gui
+            .platform
+            .as_mut()
+            .unwrap()
+            .prepare_frame(self.gui.context.as_mut().unwrap().io_mut(), window)
+        {
             error!("Failed to prepare the gui frame: {:?}", err);
             return Err(ErrorCode::Unknown);
         }
@@ -210,21 +222,33 @@ impl VulkanContext<'_> {
                     "Mouse Position: ({:.1},{:.1})",
                     mouse_pos[0], mouse_pos[1]
                 ))
-            })
-        ;
+            });
 
-        self.gui.platform.as_mut().unwrap().prepare_render(ui, window);
+        self.gui
+            .platform
+            .as_mut()
+            .unwrap()
+            .prepare_render(ui, window);
 
         let draw_data = self.gui.context.as_mut().unwrap().render();
 
         let main_command_buffer = self.frames[self.frame_index % FRAME_OVERLAP].main_command_buffer;
-        if let Err(err) = self.gui.renderer.as_mut().unwrap().cmd_draw(main_command_buffer, draw_data){
-            error!("Failed to send a draw command from the gui renderer: {:?}", err);
+        if let Err(err) = self
+            .gui
+            .renderer
+            .as_mut()
+            .unwrap()
+            .cmd_draw(main_command_buffer, draw_data)
+        {
+            error!(
+                "Failed to send a draw command from the gui renderer: {:?}",
+                err
+            );
             return Err(ErrorCode::VulkanFailure);
         }
 
         let device = self.get_device()?;
-        unsafe{device.cmd_end_rendering(main_command_buffer)};
+        unsafe { device.cmd_end_rendering(main_command_buffer) };
 
         Ok(())
     }
@@ -237,23 +261,21 @@ impl VulkanContext<'_> {
 
     pub fn on_device_event_gui(&mut self, event: &DeviceEvent) -> Result<(), ErrorCode> {
         let io = self.gui.context.as_mut().unwrap().io_mut();
-        match event {
-            // Track key release events outside our window. If we don't do this,
-            // we might never see the release event if some other window gets focus.
-            DeviceEvent::Key(raw_key_event) => {
-                match raw_key_event.physical_key {
-                    winit::keyboard::PhysicalKey::Code(key_code) => {
-                       io.keys_down[key_code as usize] = false;                         
-                    },
-                    winit::keyboard::PhysicalKey::Unidentified(_) => (),
-                }
-            },
-            _ => ()
+        // Track key release events outside our window. If we don't do this,
+        // we might never see the release event if some other window gets focus.
+        if let DeviceEvent::Key(raw_key_event) = event {
+            if let winit::keyboard::PhysicalKey::Code(key_code) = raw_key_event.physical_key {
+                io.keys_down[key_code as usize] = false;
+            }
         }
         Ok(())
     }
 
-    pub fn on_window_event_gui(&mut self, window: &Window, event: &WindowEvent) -> Result<(), ErrorCode> {
+    pub fn on_window_event_gui(
+        &mut self,
+        window: &Window,
+        event: &WindowEvent,
+    ) -> Result<(), ErrorCode> {
         let io = self.gui.context.as_mut().unwrap().io_mut();
         if let WindowEvent::ModifiersChanged(modifiers) = event {
             io.key_shift = modifiers.state().shift_key();
@@ -287,46 +309,39 @@ impl VulkanContext<'_> {
                 let logical_size = platform.scale_size_from_winit(window, logical_size);
                 io.display_size = [logical_size.width as f32, logical_size.height as f32];
             }
-            WindowEvent::KeyboardInput {
-                event,
-                ..
-            } => {
+            WindowEvent::KeyboardInput { event, .. } => {
                 let state = event.state;
-                match event.physical_key {
-                    winit::keyboard::PhysicalKey::Code(key_code) => {
-                        let pressed = state == ElementState::Pressed;
-                        io.keys_down[key_code as usize] = pressed;
-                        match key_code {
-                            // This is a bit redundant here, but we'll leave it in. The OS occasionally
-                            // fails to send modifiers keys, but it doesn't seem to send false-positives,
-                            // so double checking isn't terrible in case some system *doesn't* send
-                            // device events sometimes
-                            winit::keyboard::KeyCode::ControlLeft | winit::keyboard::KeyCode::ControlRight => io.key_ctrl = pressed,
-                            winit::keyboard::KeyCode::ShiftLeft | winit::keyboard::KeyCode::ShiftRight => io.key_shift = pressed,
-                            winit::keyboard::KeyCode::AltLeft | winit::keyboard::KeyCode::AltRight => io.key_alt = pressed,
-                            winit::keyboard::KeyCode::SuperLeft | winit::keyboard::KeyCode::SuperRight => io.key_super = pressed,
-                            _ => (),
+                if let winit::keyboard::PhysicalKey::Code(key_code) = event.physical_key {
+                    let pressed = state == ElementState::Pressed;
+                    io.keys_down[key_code as usize] = pressed;
+                    match key_code {
+                        // This is a bit redundant here, but we'll leave it in. The OS occasionally
+                        // fails to send modifiers keys, but it doesn't seem to send false-positives,
+                        // so double checking isn't terrible in case some system *doesn't* send
+                        // device events sometimes
+                        winit::keyboard::KeyCode::ControlLeft
+                        | winit::keyboard::KeyCode::ControlRight => io.key_ctrl = pressed,
+                        winit::keyboard::KeyCode::ShiftLeft
+                        | winit::keyboard::KeyCode::ShiftRight => io.key_shift = pressed,
+                        winit::keyboard::KeyCode::AltLeft | winit::keyboard::KeyCode::AltRight => {
+                            io.key_alt = pressed
                         }
-                    },
-                    winit::keyboard::PhysicalKey::Unidentified(_) => (),
+                        winit::keyboard::KeyCode::SuperLeft
+                        | winit::keyboard::KeyCode::SuperRight => io.key_super = pressed,
+                        _ => (),
+                    }
                 }
-                match &event.logical_key {
-                    winit::keyboard::Key::Character(ch) => {
-                        // Exclude the backspace key ('\u{7f}'). Otherwise we will insert this char and then
-                        // delete it
-                        match winit_character_to_imgui_key(ch.clone()){
-                            Some(ch) => {
-                                let ch = (ch as u8) as char;
-                                if ch != '\u{7f}' {
-                                    io.add_input_character(ch)
-                                }
-                            },
-                            None => (),
-                        }                        
-                    },
-                    _ => ()
-                }                
-            },
+                if let winit::keyboard::Key::Character(ch) = &event.logical_key {
+                    // Exclude the backspace key ('\u{7f}'). Otherwise we will insert this char and then
+                    // delete it
+                    if let Some(ch) = winit_character_to_imgui_key(ch.clone()) {
+                        let ch = (ch as u8) as char;
+                        if ch != '\u{7f}' {
+                            io.add_input_character(ch)
+                        }
+                    }
+                }
+            }
             WindowEvent::CursorMoved { position, .. } => {
                 let position = position.to_logical(window.scale_factor());
                 let position = platform.scale_pos_from_winit(window, position);
@@ -358,9 +373,15 @@ impl VulkanContext<'_> {
             WindowEvent::MouseInput { state, button, .. } => {
                 let pressed = *state == ElementState::Pressed;
                 match button {
-                    winit::event::MouseButton::Left => io.add_mouse_button_event(MouseButton::Left, pressed),
-                    winit::event::MouseButton::Right => io.add_mouse_button_event(MouseButton::Right, pressed),
-                    winit::event::MouseButton::Middle => io.add_mouse_button_event(MouseButton::Middle, pressed),
+                    winit::event::MouseButton::Left => {
+                        io.add_mouse_button_event(MouseButton::Left, pressed)
+                    }
+                    winit::event::MouseButton::Right => {
+                        io.add_mouse_button_event(MouseButton::Right, pressed)
+                    }
+                    winit::event::MouseButton::Middle => {
+                        io.add_mouse_button_event(MouseButton::Middle, pressed)
+                    }
                     _ => (),
                 }
             }

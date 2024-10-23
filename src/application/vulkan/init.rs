@@ -7,7 +7,7 @@ use super::types::VulkanContext;
 
 impl VulkanContext<'_> {
     pub fn init(parameters: &ApplicationParameters, window: &Window) -> Result<Self, ErrorCode> {
-        let mut context = VulkanContext{
+        let mut context = VulkanContext {
             parameters: parameters.clone(),
             ..Self::default()
         };
@@ -130,7 +130,7 @@ impl VulkanContext<'_> {
             debug!("Vulkan drawing resources initialized successfully !");
         }
 
-        if let Err(err) = context.init_gui(&window){
+        if let Err(err) = context.init_gui(window) {
             error!("Failed to initialize the vulkan gui: {:?}", err);
             return Err(ErrorCode::InitializationFailure);
         } else {

@@ -1,21 +1,24 @@
 use core::error::ErrorCode;
 use std::time::{Duration, Instant};
 
-use window::init::WindowContext;
-use winit::{event_loop::{ActiveEventLoop, ControlFlow, EventLoop}, window::Window};
 use log::{debug, error};
 use parameters::ApplicationParameters;
 use pipelines::Pipelines;
 use scene::Scene;
 use vulkan::types::VulkanContext;
+use window::init::WindowContext;
+use winit::{
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+    window::Window,
+};
 
 mod core;
+mod handler;
 mod parameters;
 mod pipelines;
 mod scene;
 mod vulkan;
 mod window;
-mod handler;
 
 pub struct Application<'a> {
     parameters: ApplicationParameters,
@@ -29,12 +32,12 @@ pub struct Application<'a> {
 
 impl Default for Application<'_> {
     fn default() -> Self {
-        Self { 
-            parameters: Default::default(), 
-            window: Default::default(), 
-            vulkan_context: Default::default(), 
-            scene: Default::default(), 
-            pipelines: Default::default(), 
+        Self {
+            parameters: Default::default(),
+            window: Default::default(),
+            vulkan_context: Default::default(),
+            scene: Default::default(),
+            pipelines: Default::default(),
             last_frame: Instant::now(),
             delta_time: Default::default(),
         }
@@ -47,7 +50,7 @@ impl Application<'_> {
         let parameters = ApplicationParameters::default();
 
         debug!("Initializing the window...");
-        let window = match WindowContext::init(&parameters, event_loop){
+        let window = match WindowContext::init(&parameters, event_loop) {
             Ok(window) => window,
             Err(err) => {
                 error!("Failed to initialize the application window: {:?}", err);
@@ -87,7 +90,7 @@ impl Application<'_> {
 
     pub fn run() -> Result<(), ErrorCode> {
         debug!("Initializing the event loop...");
-        let event_loop = match EventLoop::new(){
+        let event_loop = match EventLoop::new() {
             Ok(event_loop) => event_loop,
             Err(err) => {
                 error!("Failed to initialize the event loop: {:?}", err);
@@ -97,7 +100,7 @@ impl Application<'_> {
         event_loop.set_control_flow(ControlFlow::Poll);
 
         let mut app = Application::default();
-        if let Err(err) = event_loop.run_app(&mut app){
+        if let Err(err) = event_loop.run_app(&mut app) {
             error!("An error occured during the main event loop: {:?}", err);
             return Err(ErrorCode::Unknown);
         }

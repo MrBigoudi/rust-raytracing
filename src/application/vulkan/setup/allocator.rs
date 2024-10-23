@@ -30,7 +30,7 @@ impl<'a> VulkanContext<'a> {
         Ok(self.allocation_callback)
     }
 
-    pub fn get_allocator(&self) -> Result<&ManuallyDrop<AllocatorWrapper>, ErrorCode>{
+    pub fn get_allocator(&self) -> Result<&ManuallyDrop<AllocatorWrapper>, ErrorCode> {
         match &self.allocator {
             Some(allocator) => Ok(allocator),
             None => {

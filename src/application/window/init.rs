@@ -1,14 +1,19 @@
 use log::error;
 use winit::{
-    dpi::{LogicalSize, PhysicalSize, Position}, event_loop::ActiveEventLoop, window::Window
+    dpi::{LogicalSize, PhysicalSize, Position},
+    event_loop::ActiveEventLoop,
+    window::Window,
 };
 
 use crate::application::{core::error::ErrorCode, parameters::ApplicationParameters};
 
 pub struct WindowContext;
 
-impl WindowContext{
-    pub fn init(parameters: &ApplicationParameters, event_loop: &ActiveEventLoop) -> Result<Window, ErrorCode> {
+impl WindowContext {
+    pub fn init(
+        parameters: &ApplicationParameters,
+        event_loop: &ActiveEventLoop,
+    ) -> Result<Window, ErrorCode> {
         let primary_monitor = event_loop.primary_monitor().unwrap();
         let scale_factor = primary_monitor.scale_factor();
 
@@ -30,10 +35,9 @@ impl WindowContext{
         let window_attributes = Window::default_attributes()
             .with_title(&parameters.window_title)
             .with_position(position)
-            .with_inner_size(window_size)
-        ;
+            .with_inner_size(window_size);
 
-        match event_loop.create_window(window_attributes){
+        match event_loop.create_window(window_attributes) {
             Ok(window) => Ok(window),
             Err(err) => {
                 error!("Failed to create a winit window: {:?}", err);

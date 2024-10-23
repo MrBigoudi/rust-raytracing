@@ -5,6 +5,7 @@ use crate::application::{core::error::ErrorCode, vulkan::types::VulkanContext};
 
 #[derive(Default, Debug)]
 pub struct SwapchainSupportDetails {
+    #[allow(dead_code)]
     pub capabilities: SurfaceCapabilitiesKHR,
     pub formats: Vec<SurfaceFormatKHR>,
     pub present_modes: Vec<PresentModeKHR>,
