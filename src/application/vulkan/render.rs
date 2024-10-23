@@ -4,6 +4,7 @@ use ash::vk::{
     PresentInfoKHR, SemaphoreSubmitInfo, SubmitInfo2,
 };
 use log::{error, warn};
+use winit::window::Window;
 
 use crate::application::{
     core::error::ErrorCode,
@@ -111,9 +112,10 @@ impl VulkanContext<'_> {
     }
 
     fn prepare_rendering_commands(
-        &self,
+        &mut self,
         swapchain_next_index: usize,
         pipelines: &Pipelines,
+        window: &Window,
     ) -> Result<(), ErrorCode> {
         // Vulkan handles are just a 64 bit handle/pointer, so its fine to copy them around
         // But remember that their actual data is handled by vulkan itself
@@ -208,6 +210,25 @@ impl VulkanContext<'_> {
             &main_command_buffer,
             swapchain_image,
             ImageLayout::TRANSFER_DST_OPTIMAL,
+            ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
+        )?;
+
+        {
+            if let Err(err) = self.draw_gui(window, swapchain_next_index){
+                error!("Failed to render the gui: {:?}", err);
+                return Err(ErrorCode::Unknown);
+            }
+        }
+
+        let device = self.get_device()?;
+        let main_command_buffer = self.get_current_frame()?.main_command_buffer;
+        let swapchain_image = &self.get_swapchain_handler()?.images[swapchain_next_index];
+        // Draw the gui
+        transition_image(
+            device,
+            &main_command_buffer,
+            swapchain_image,
+            ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
             ImageLayout::PRESENT_SRC_KHR,
         )?;
 
@@ -306,7 +327,7 @@ impl VulkanContext<'_> {
         Ok(())
     }
 
-    pub fn draw(&mut self, pipelines: &Pipelines) -> Result<(), ErrorCode> {
+    pub fn draw(&mut self, pipelines: &Pipelines, window: &Window) -> Result<(), ErrorCode> {
         let timeout_in_ns: u64 = 1_000_000_000;
         if let Err(err) = self.wait_render_fence(timeout_in_ns) {
             error!("Failed to wait for a render fence when drawing: {:?}", err);
@@ -344,7 +365,7 @@ impl VulkanContext<'_> {
             error!("Failed to update the draw extent when drawing: {:?}", err);
             return Err(ErrorCode::Unknown);
         }
-        if let Err(err) = self.prepare_rendering_commands(swapchain_next_index as usize, pipelines)
+        if let Err(err) = self.prepare_rendering_commands(swapchain_next_index as usize, pipelines, window)
         {
             error!(
                 "Failed to prepare the rendering commands when drawing: {:?}",

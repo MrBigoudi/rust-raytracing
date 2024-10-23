@@ -14,7 +14,7 @@ use super::{gui::GuiWrapper, setup::{
     devices::{device_requirements::DeviceRequirements, physical_device::PhysicalDeviceInfo},
     draw_resources::AllocatedImage,
     frame_data::VulkanFrameData,
-    swapchains::swapchain::SwapchainHandler,
+    swapchain::handler::SwapchainHandler,
 }};
 
 #[derive(Default)]
@@ -48,5 +48,5 @@ pub struct VulkanContext<'a> {
     pub draw_image: Option<AllocatedImage>,
     pub draw_extent: Extent2D,
 
-    pub gui: Option<GuiWrapper>,
+    pub gui: GuiWrapper,
 }

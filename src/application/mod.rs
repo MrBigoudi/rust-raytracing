@@ -1,4 +1,5 @@
 use core::error::ErrorCode;
+use std::time::{Duration, Instant};
 
 use window::init::WindowContext;
 use winit::{event_loop::{ActiveEventLoop, ControlFlow, EventLoop}, window::Window};
@@ -16,13 +17,28 @@ mod vulkan;
 mod window;
 mod handler;
 
-#[derive(Default)]
 pub struct Application<'a> {
     parameters: ApplicationParameters,
     window: Option<Window>,
     vulkan_context: Option<VulkanContext<'a>>,
     scene: Option<Scene>,
     pipelines: Option<Pipelines>,
+    last_frame: Instant,
+    delta_time: Duration,
+}
+
+impl Default for Application<'_> {
+    fn default() -> Self {
+        Self { 
+            parameters: Default::default(), 
+            window: Default::default(), 
+            vulkan_context: Default::default(), 
+            scene: Default::default(), 
+            pipelines: Default::default(), 
+            last_frame: Instant::now(),
+            delta_time: Default::default(),
+        }
+    }
 }
 
 impl Application<'_> {

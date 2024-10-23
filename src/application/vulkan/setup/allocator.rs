@@ -30,6 +30,16 @@ impl<'a> VulkanContext<'a> {
         Ok(self.allocation_callback)
     }
 
+    pub fn get_allocator(&self) -> Result<&ManuallyDrop<AllocatorWrapper>, ErrorCode>{
+        match &self.allocator {
+            Some(allocator) => Ok(allocator),
+            None => {
+                error!("Can't access the vulkan allocator");
+                Err(ErrorCode::AccessFailure)
+            }
+        }
+    }
+
     pub fn init_allocator(&mut self) -> Result<(), ErrorCode> {
         let device = self.get_device()?;
         let physical_device = self.get_physical_device()?;

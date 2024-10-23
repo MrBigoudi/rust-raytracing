@@ -130,6 +130,13 @@ impl VulkanContext<'_> {
             debug!("Vulkan drawing resources initialized successfully !");
         }
 
+        if let Err(err) = context.init_gui(&window){
+            error!("Failed to initialize the vulkan gui: {:?}", err);
+            return Err(ErrorCode::InitializationFailure);
+        } else {
+            debug!("Vulkan gui initialized successfully !");
+        }
+
         Ok(context)
     }
 }

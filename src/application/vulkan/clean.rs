@@ -8,6 +8,13 @@ impl VulkanContext<'_> {
     pub fn clean(&mut self) -> Result<(), ErrorCode> {
         self.device_wait_idle().unwrap();
 
+        if let Err(err) = self.clean_gui() {
+            error!("Failed to shutdown the vulkan gui: {:?}", err);
+            return Err(ErrorCode::CleaningFailure);
+        } else {
+            debug!("Vulkan drawing resources cleaned successfully !");
+        }
+
         if let Err(err) = self.clean_draw_resources() {
             error!("Failed to shutdown the vulkan drawing resources: {:?}", err);
             return Err(ErrorCode::CleaningFailure);
