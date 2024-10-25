@@ -120,12 +120,11 @@ impl Immediate {
             return Err(ErrorCode::VulkanFailure);
         }
 
-        let command_buffer = self.command_buffer;
         let command_buffer_begin_info =
             CommandBufferBeginInfo::default().flags(CommandBufferUsageFlags::ONE_TIME_SUBMIT);
 
         if let Err(err) =
-            unsafe { device.begin_command_buffer(command_buffer, &command_buffer_begin_info) }
+            unsafe { device.begin_command_buffer(self.command_buffer, &command_buffer_begin_info) }
         {
             error!(
                 "Failed to begin the command buffer when submitting an immediate structure: {:?}",
@@ -134,12 +133,12 @@ impl Immediate {
             return Err(ErrorCode::VulkanFailure);
         }
 
-        if let Err(err) = fct(vulkan_context, command_buffer) {
+        if let Err(err) = fct(vulkan_context, self.command_buffer) {
             error!("Failed to run the custom submit function when submitting an immediate structure: {:?}", err);
             return Err(ErrorCode::Unknown);
         }
 
-        if let Err(err) = unsafe { device.end_command_buffer(command_buffer) } {
+        if let Err(err) = unsafe { device.end_command_buffer(self.command_buffer) } {
             error!(
                 "Failed to end the command buffer when submitting an immediate structure: {:?}",
                 err
@@ -148,7 +147,7 @@ impl Immediate {
         }
 
         let command_buffer_submit_info =
-            [CommandBufferSubmitInfo::default().command_buffer(command_buffer)];
+            [CommandBufferSubmitInfo::default().command_buffer(self.command_buffer)];
         let submit_info =
             [SubmitInfo2::default().command_buffer_infos(&command_buffer_submit_info)];
 
@@ -164,7 +163,7 @@ impl Immediate {
             return Err(ErrorCode::VulkanFailure);
         }
 
-        let timeout = 1e9 as u64;
+        let timeout = 1e10 as u64;
         let should_wait_all = true;
         if let Err(err) = unsafe { device.wait_for_fences(&[self.fence], should_wait_all, timeout) }
         {

@@ -9,6 +9,7 @@ use winit::window::Window;
 use crate::application::{
     core::error::ErrorCode,
     pipelines::{compute_pipeline::ComputePipeline, Pipelines},
+    scene::Scene,
 };
 
 use super::{
@@ -106,16 +107,22 @@ impl VulkanContext<'_> {
         Ok(())
     }
 
-    fn prepare_raytracing_command(&self, pipelines: &Pipelines) -> Result<(), ErrorCode> {
-        pipelines.test_pipeline.run(self)?;
+    fn prepare_raytracing_command(
+        &self,
+        pipelines: &mut Pipelines,
+        scene: &Scene,
+    ) -> Result<(), ErrorCode> {
+        // TODO: use the correct pipeline
+        pipelines.test_pipeline.run(self, scene)?;
         Ok(())
     }
 
     fn prepare_rendering_commands(
         &mut self,
         swapchain_next_index: usize,
-        pipelines: &Pipelines,
+        pipelines: &mut Pipelines,
         window: &Window,
+        scene: &Scene,
     ) -> Result<(), ErrorCode> {
         // Vulkan handles are just a 64 bit handle/pointer, so its fine to copy them around
         // But remember that their actual data is handled by vulkan itself
@@ -170,7 +177,7 @@ impl VulkanContext<'_> {
             error!("Failed to prepare the clear screen command: {:?}", err);
             return Err(ErrorCode::Unknown);
         }
-        if let Err(err) = self.prepare_raytracing_command(pipelines) {
+        if let Err(err) = self.prepare_raytracing_command(pipelines, scene) {
             error!("Failed to prepare the raytracing command: {:?}", err);
             return Err(ErrorCode::Unknown);
         }
@@ -327,7 +334,12 @@ impl VulkanContext<'_> {
         Ok(())
     }
 
-    pub fn draw(&mut self, pipelines: &Pipelines, window: &Window) -> Result<(), ErrorCode> {
+    pub fn draw(
+        &mut self,
+        pipelines: &mut Pipelines,
+        window: &Window,
+        scene: &Scene,
+    ) -> Result<(), ErrorCode> {
         let timeout_in_ns: u64 = 1_000_000_000;
         if let Err(err) = self.wait_render_fence(timeout_in_ns) {
             error!("Failed to wait for a render fence when drawing: {:?}", err);
@@ -366,7 +378,7 @@ impl VulkanContext<'_> {
             return Err(ErrorCode::Unknown);
         }
         if let Err(err) =
-            self.prepare_rendering_commands(swapchain_next_index as usize, pipelines, window)
+            self.prepare_rendering_commands(swapchain_next_index as usize, pipelines, window, scene)
         {
             error!(
                 "Failed to prepare the rendering commands when drawing: {:?}",

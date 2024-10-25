@@ -12,7 +12,7 @@ use crate::application::{
     vulkan::{descriptors_helper::allocator::DescriptorAllocator, types::VulkanContext},
 };
 
-use super::{descriptor::Descriptor, shader::Shader};
+use super::{descriptor::Descriptor, push_constant::PushConstant, shader::Shader};
 
 #[derive(Default)]
 pub struct PipelineAttributes {
@@ -20,7 +20,7 @@ pub struct PipelineAttributes {
     pub descriptors: Vec<Descriptor>,
     pub pipeline: Pipeline,
     pub pipeline_layout: PipelineLayout,
-    // TODO: handle push constants
+    pub push_constants: PushConstant,
 }
 
 pub trait ComputePipeline {
@@ -30,7 +30,12 @@ pub trait ComputePipeline {
         vulkan_context: &VulkanContext,
         scene: &Scene,
     ) -> Result<(), ErrorCode>;
-    fn run(&self, vulkan_context: &VulkanContext) -> Result<(), ErrorCode>;
+    fn init_push_constants(
+        &mut self,
+        vulkan_context: &VulkanContext,
+        scene: &Scene,
+    ) -> Result<(), ErrorCode>;
+    fn run(&mut self, vulkan_context: &VulkanContext, scene: &Scene) -> Result<(), ErrorCode>;
 
     fn set_pipeline(&mut self, pipeline: Pipeline);
     fn set_pipeline_layout(&mut self, pipeline_layout: PipelineLayout);
@@ -43,8 +48,7 @@ pub trait ComputePipeline {
             .map(|descriptor| descriptor.set_layout)
             .collect::<Vec<DescriptorSetLayout>>();
 
-        // TODO: handle push constants
-        let push_constant_ranges = [];
+        let push_constant_ranges = vec![self.get_attributes()?.push_constants.range];
 
         let create_info = PipelineLayoutCreateInfo::default()
             .set_layouts(&set_layouts)
@@ -135,6 +139,13 @@ pub trait ComputePipeline {
         if let Err(err) = self.init_descriptors(vulkan_context, scene) {
             error!(
                 "Failed to initialize the vulkan descriptors in a compute pipeline: {:?}",
+                err
+            );
+            return Err(ErrorCode::InitializationFailure);
+        }
+        if let Err(err) = self.init_push_constants(vulkan_context, scene) {
+            error!(
+                "Failed to initialize the vulkan push constants in a compute pipeline: {:?}",
                 err
             );
             return Err(ErrorCode::InitializationFailure);

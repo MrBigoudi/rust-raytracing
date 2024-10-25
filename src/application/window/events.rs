@@ -44,11 +44,15 @@ impl Application<'_> {
 
     pub fn on_redraw(&mut self) -> Result<(), ErrorCode> {
         if let Some(vulkan_context) = &mut self.vulkan_context {
-            if let Some(pipelines) = &self.pipelines {
+            if let Some(pipelines) = &mut self.pipelines {
                 if let Some(window) = &self.window {
-                    if let Err(err) = vulkan_context.draw(pipelines, window) {
-                        error!("The vulkan context failed to draw stuff: {:?}", err);
-                        return Err(ErrorCode::VulkanFailure);
+                    if let Some(scene) = &self.scene {
+                        if let Err(err) = vulkan_context.draw(pipelines, window, scene) {
+                            error!("The vulkan context failed to draw stuff: {:?}", err);
+                            return Err(ErrorCode::VulkanFailure);
+                        }
+                    } else {
+                        warn!("The scene is not initialized correctly...")
                     }
                 } else {
                     warn!("The window is not initialized correctly...")

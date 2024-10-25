@@ -1,6 +1,8 @@
+use std::time::Instant;
+
 use ash::vk::{
     DescriptorImageInfo, DescriptorSetLayoutCreateFlags, DescriptorType, ImageLayout, Pipeline,
-    PipelineBindPoint, PipelineLayout, ShaderStageFlags, WriteDescriptorSet,
+    PipelineBindPoint, PipelineLayout, PushConstantRange, ShaderStageFlags, WriteDescriptorSet,
 };
 use log::error;
 
@@ -9,6 +11,7 @@ use crate::application::{
     pipelines::{
         compute_pipeline::{ComputePipeline, PipelineAttributes},
         descriptor::Descriptor,
+        push_constant::PushConstant,
     },
     scene::Scene,
     vulkan::{
@@ -19,9 +22,33 @@ use crate::application::{
     },
 };
 
-#[derive(Default)]
 pub struct TestPipeline {
     pub base: PipelineAttributes,
+    #[allow(dead_code)]
+    pub push_constant: TestPushConstant,
+    pub last_frame: Instant,
+}
+
+impl Default for TestPipeline {
+    fn default() -> Self {
+        Self {
+            base: Default::default(),
+            push_constant: Default::default(),
+            last_frame: Instant::now(),
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct TestPushConstant {
+    #[allow(dead_code)]
+    pub data0: glam::Vec4,
+    #[allow(dead_code)]
+    pub data1: glam::Vec4,
+    #[allow(dead_code)]
+    pub data2: glam::Vec4,
+    #[allow(dead_code)]
+    pub data3: glam::Vec4,
 }
 
 impl TestPipeline {
@@ -135,7 +162,7 @@ impl ComputePipeline for TestPipeline {
         Ok(())
     }
 
-    fn run(&self, vulkan_context: &VulkanContext) -> Result<(), ErrorCode> {
+    fn run(&mut self, vulkan_context: &VulkanContext, _scene: &Scene) -> Result<(), ErrorCode> {
         let device = vulkan_context.get_device()?;
         let command_buffer = vulkan_context.get_current_frame()?.main_command_buffer;
 
@@ -160,6 +187,27 @@ impl ComputePipeline for TestPipeline {
             )
         };
 
+        // Setup the push constants
+        // TODO: Setup other push constants
+        let now = Instant::now();
+        let value = (self.last_frame.elapsed().as_nanos() as f32).sin();
+        let push_constant = TestPushConstant {
+            data0: glam::vec4(value, 1., 0.2, 0.6),
+            data1: glam::vec4(0., 1., 0.4, 0.6),
+            data2: glam::vec4(0., 2., 0.3, 0.6),
+            data3: glam::vec4(0.4, 0.5, 0.6, 0.7),
+        };
+        self.last_frame = now;
+        unsafe {
+            device.cmd_push_constants(
+                command_buffer,
+                self.base.pipeline_layout,
+                ShaderStageFlags::COMPUTE,
+                0,
+                PushConstant::data_to_u8_slice(&push_constant),
+            );
+        }
+
         // Execute the compute pipeline dispatch
         // We are using 16x16 workgroup size so we need to divide the drawing size by 16
         unsafe {
@@ -170,6 +218,22 @@ impl ComputePipeline for TestPipeline {
                 1,
             )
         };
+        Ok(())
+    }
+
+    fn init_push_constants(
+        &mut self,
+        _vulkan_context: &VulkanContext,
+        _scene: &Scene,
+    ) -> Result<(), ErrorCode> {
+        let range = PushConstantRange::default()
+            .offset(0)
+            .size(size_of::<TestPushConstant>() as u32)
+            .stage_flags(ShaderStageFlags::COMPUTE);
+        let push_constant = PushConstant { range };
+
+        self.base.push_constants = push_constant;
+
         Ok(())
     }
 }

@@ -1,3 +1,12 @@
+/// PUSH CONSTANTS
+[[vk::push_constant]]
+cbuffer _PushConstants {
+    float4 data0;
+    float4 data1;
+    float4 data2;
+    float4 data3;
+}
+
 //////////// FRAMEBUFFER
 static const int DESCRIPTOR_SET_FRAMEBUFFER = 0;
 static const int DESCRIPTOR_BINDING_FRAMEBUFFER = 0;

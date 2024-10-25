@@ -50,7 +50,6 @@ impl Default for DeviceRequirements<'_> {
 
 impl VulkanContext<'_> {
     pub fn init_device_requirements(&mut self) -> Result<(), ErrorCode> {
-        // TODO: make the device requirements configurable
         self.device_requirements = Some(DeviceRequirements::default());
         Ok(())
     }

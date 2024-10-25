@@ -7,19 +7,22 @@ use super::{core::error::ErrorCode, scene::Scene, vulkan::types::VulkanContext};
 pub mod compute_pipeline;
 pub mod descriptor;
 pub mod implementation;
+pub mod push_constant;
 pub mod shader;
 
 #[derive(Default)]
 pub struct Pipelines {
+    // TODO: use the correct pipeline
     pub test_pipeline: TestPipeline,
 }
 
 impl Pipelines {
     pub fn init(vulkan_context: &VulkanContext, scene: &Scene) -> Result<Self, ErrorCode> {
         let mut pipelines = Self::default();
+        // TODO: use the correct shader
         if let Err(err) = pipelines
             .test_pipeline
-            .init("test.slang", "main", vulkan_context, scene)
+            .init("test", "main", vulkan_context, scene)
         {
             error!("Failed to initialize the test pipeline: {:?}", err);
             return Err(ErrorCode::InitializationFailure);

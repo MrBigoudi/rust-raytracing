@@ -26,7 +26,6 @@ impl VulkanContext<'_> {
         for queue_index in queue_indices {
             let queue_create_info = DeviceQueueCreateInfo::default()
                 .queue_family_index(queue_index as u32)
-                // TODO: change the queue priorities
                 .queue_priorities(&[1.]);
             queue_create_infos.push(queue_create_info);
         }
