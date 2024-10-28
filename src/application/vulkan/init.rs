@@ -130,6 +130,13 @@ impl VulkanContext<'_> {
             debug!("Vulkan drawing resources initialized successfully !");
         }
 
+        if let Err(err) = context.init_immediate() {
+            error!("Failed to initialize the vulkan immediate submit structure: {:?}", err);
+            return Err(ErrorCode::InitializationFailure);
+        } else {
+            debug!("Vulkan immediate submit structure initialized successfully !");
+        }
+
         if let Err(err) = context.init_gui(window) {
             error!("Failed to initialize the vulkan gui: {:?}", err);
             return Err(ErrorCode::InitializationFailure);

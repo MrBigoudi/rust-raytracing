@@ -36,8 +36,8 @@ ConstantBuffer<Camera> _Camera;
 
 
 //////////// DISPATCH COMPUTE
-static const int THREAD_GROUP_SIZE_X = 16;
-static const int THREAD_GROUP_SIZE_Y = 16;
+static const int THREAD_GROUP_SIZE_X = 32;
+static const int THREAD_GROUP_SIZE_Y = 32;
 static const int THREAD_GROUP_SIZE_Z = 1;
 
 [shader("compute")]
@@ -51,6 +51,10 @@ void main(uint3 thread_id : SV_DispatchThreadID) {
     float2 pixel_position = float2(0.f);
     pixel_position.x = float(texel_coord.x) / float(size.x);
     pixel_position.y = float(texel_coord.y) / float(size.y);
+    if (pixel_position.x > 1. || pixel_position.x < 0 
+        || pixel_position.y > 1. || pixel_position.y < 0) {
+        return;
+    }
 
     Ray ray = get_ray(pixel_position, _Camera);
 

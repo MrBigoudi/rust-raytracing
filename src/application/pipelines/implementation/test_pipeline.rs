@@ -52,30 +52,7 @@ pub struct TestPushConstant {
 }
 
 impl TestPipeline {
-    pub fn init_pool_size_ratios(
-        &mut self,
-        vulkan_context: &VulkanContext,
-    ) -> Result<(), ErrorCode> {
-        let pool_size_ratios = [
-            // Framebuffer
-            DescriptorPoolSizeRatio {
-                descriptor_type: DescriptorType::STORAGE_IMAGE,
-                ratio: 1.0,
-            },
-            // TODO: add other things
-        ];
-        let device = vulkan_context.get_device()?;
-        let allocation_callback = vulkan_context.get_allocation_callback()?;
-        self.base.descriptor_allocator.init_pool(
-            device,
-            allocation_callback,
-            10,
-            &pool_size_ratios,
-        )?;
-        Ok(())
-    }
-
-    pub fn init_set_0(
+    fn init_set_0(
         &mut self,
         vulkan_context: &VulkanContext,
         _scene: &Scene,
@@ -147,7 +124,6 @@ impl ComputePipeline for TestPipeline {
         vulkan_context: &VulkanContext,
         scene: &Scene,
     ) -> Result<(), ErrorCode> {
-        self.init_pool_size_ratios(vulkan_context)?;
         let set_0 = match self.init_set_0(vulkan_context, scene) {
             Ok(set) => set,
             Err(err) => {
@@ -232,8 +208,49 @@ impl ComputePipeline for TestPipeline {
             .stage_flags(ShaderStageFlags::COMPUTE);
         let push_constant = PushConstant { range };
 
-        self.base.push_constants = push_constant;
+        self.base.push_constants = Some(push_constant);
 
+        Ok(())
+    }
+
+    fn init_pool_size_ratios(
+        &mut self,
+        vulkan_context: &VulkanContext,
+    ) -> Result<(), ErrorCode> {
+        let pool_size_ratios = [
+            // Framebuffer
+            DescriptorPoolSizeRatio {
+                descriptor_type: DescriptorType::STORAGE_IMAGE,
+                ratio: 1.0,
+            },
+            // TODO: add other things
+        ];
+        let device = vulkan_context.get_device()?;
+        let allocation_callback = vulkan_context.get_allocation_callback()?;
+        self.base.descriptor_allocator.init_pool(
+            device,
+            allocation_callback,
+            10,
+            &pool_size_ratios,
+        )?;
+        Ok(())
+    }
+
+    fn clean(&mut self, vulkan_context: &VulkanContext) -> Result<(), ErrorCode> {
+        if let Err(err) = self.clean_descriptors(vulkan_context) {
+            error!(
+                "Failed to clean the vulkan descriptors in the test pipeline: {:?}",
+                err
+            );
+            return Err(ErrorCode::CleaningFailure);
+        }
+        if let Err(err) = self.clean_pipeline(vulkan_context) {
+            error!(
+                "Failed to clean the vulkan pipeline handler in the test pipeline: {:?}",
+                err
+            );
+            return Err(ErrorCode::CleaningFailure);
+        }
         Ok(())
     }
 }

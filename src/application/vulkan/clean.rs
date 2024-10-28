@@ -12,7 +12,14 @@ impl VulkanContext<'_> {
             error!("Failed to shutdown the vulkan gui: {:?}", err);
             return Err(ErrorCode::CleaningFailure);
         } else {
-            debug!("Vulkan drawing resources cleaned successfully !");
+            debug!("Vulkan gui cleaned successfully !");
+        }
+
+        if let Err(err) = self.clean_immediate() {
+            error!("Failed to shutdown the vulkan immediate submit structures: {:?}", err);
+            return Err(ErrorCode::CleaningFailure);
+        } else {
+            debug!("Vulkan immediate submit structures cleaned successfully !");
         }
 
         if let Err(err) = self.clean_draw_resources() {

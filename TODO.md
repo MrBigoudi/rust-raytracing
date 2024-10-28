@@ -6,6 +6,5 @@
 
 ## To add
 
-- create pipeline for the raytracing
-- send buffers to the gpu
 - init the scene
+- test multiple sets

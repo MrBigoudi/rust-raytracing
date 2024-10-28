@@ -113,7 +113,8 @@ impl VulkanContext<'_> {
         scene: &Scene,
     ) -> Result<(), ErrorCode> {
         // TODO: use the correct pipeline
-        pipelines.test_pipeline.run(self, scene)?;
+        // pipelines.test_pipeline.run(self, scene)?;
+        pipelines.raytracing_pipeline.run(self, scene)?;
         Ok(())
     }
 

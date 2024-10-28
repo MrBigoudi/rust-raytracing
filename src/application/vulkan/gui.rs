@@ -16,11 +16,10 @@ use winit::{
 
 use crate::application::{core::error::ErrorCode, window::key_map::winit_character_to_imgui_key};
 
-use super::{immediate::Immediate, setup::frame_data::FRAME_OVERLAP, types::VulkanContext};
+use super::{setup::frame_data::FRAME_OVERLAP, types::VulkanContext};
 
 #[derive(Default)]
 pub struct GuiWrapper {
-    pub immediate: Immediate,
     pub descriptor_pool: DescriptorPool,
     pub context: Option<Context>,
     pub platform: Option<WinitPlatform>,
@@ -93,7 +92,6 @@ impl VulkanContext<'_> {
         unsafe {
             device.destroy_descriptor_pool(gui.descriptor_pool, allocation_callback);
         }
-        gui.immediate.clean(self)?;
         self.gui.context = None;
         self.gui.platform = None;
         self.gui.renderer = None;
@@ -106,7 +104,6 @@ impl VulkanContext<'_> {
 
     pub fn init_gui(&mut self, window: &Window) -> Result<(), ErrorCode> {
         let descriptor_pool = self.init_gui_descriptor_pool()?;
-        let immediate = Immediate::init(self)?;
 
         let mut context = Context::create();
         context.set_ini_filename(None);
@@ -140,6 +137,7 @@ impl VulkanContext<'_> {
         let device = self.get_device()?;
         let graphics_queue = self.get_queues()?.graphics_queue.unwrap();
 
+        let immediate = &self.immediate_submit;
         let renderer = Renderer::with_vk_mem_allocator(
             Arc::clone(&allocator.allocator),
             device.clone(),
@@ -155,7 +153,6 @@ impl VulkanContext<'_> {
         .unwrap();
 
         let gui_wrapper = GuiWrapper {
-            immediate,
             descriptor_pool,
             context: Some(context),
             platform: Some(platform),

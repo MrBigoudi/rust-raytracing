@@ -24,7 +24,7 @@ impl Immediate {
             vulkan_context.get_queues()?.graphics_family_index.unwrap() as u32;
         let command_pool_info = CommandPoolCreateInfo::default()
             .queue_family_index(graphics_queue_index)
-            .flags(CommandPoolCreateFlags::empty());
+            .flags(CommandPoolCreateFlags::RESET_COMMAND_BUFFER);
         let device = vulkan_context.get_device()?;
         let allocation_callback = vulkan_context.get_allocation_callback()?;
         match unsafe { device.create_command_pool(&command_pool_info, allocation_callback) } {
@@ -96,14 +96,35 @@ impl Immediate {
         }
         Ok(())
     }
+}
 
-    pub fn submit(
+impl VulkanContext<'_> {
+    pub fn init_immediate(&mut self) -> Result<(), ErrorCode> {
+        match Immediate::init(self){
+            Ok(immediate) => self.immediate_submit = immediate,
+            Err(err) => {
+                error!("Failed to initialize the immediate submit structure: {:?}", err);
+                return Err(ErrorCode::InitializationFailure);
+            }
+        }
+        Ok(())
+    }
+
+    pub fn clean_immediate(&self) -> Result<(), ErrorCode> {
+        if let Err(err) = self.immediate_submit.clean(self){
+            error!("Failed to clean the immediate submit structure: {:?}", err);
+            return Err(ErrorCode::CleaningFailure);
+        }
+        Ok(())
+    }
+
+    pub fn immediate_submit(
         &self,
-        vulkan_context: &VulkanContext<'_>,
-        fct: &dyn Fn(&VulkanContext<'_>, CommandBuffer) -> Result<(), ErrorCode>,
+        fct: &dyn Fn(&VulkanContext, CommandBuffer) -> Result<(), ErrorCode>,
     ) -> Result<(), ErrorCode> {
-        let device = vulkan_context.get_device()?;
-        if let Err(err) = unsafe { device.reset_fences(&[self.fence]) } {
+        let device = self.get_device()?;
+        let immediate = &self.immediate_submit;
+        if let Err(err) = unsafe { device.reset_fences(&[immediate.fence]) } {
             error!(
                 "Failed to reset the fence when submitting an immediate structure: {:?}",
                 err
@@ -111,7 +132,7 @@ impl Immediate {
             return Err(ErrorCode::VulkanFailure);
         }
         if let Err(err) = unsafe {
-            device.reset_command_buffer(self.command_buffer, CommandBufferResetFlags::empty())
+            device.reset_command_buffer(immediate.command_buffer, CommandBufferResetFlags::empty())
         } {
             error!(
                 "Failed to reset the command buffer when submitting an immediate structure: {:?}",
@@ -124,7 +145,7 @@ impl Immediate {
             CommandBufferBeginInfo::default().flags(CommandBufferUsageFlags::ONE_TIME_SUBMIT);
 
         if let Err(err) =
-            unsafe { device.begin_command_buffer(self.command_buffer, &command_buffer_begin_info) }
+            unsafe { device.begin_command_buffer(immediate.command_buffer, &command_buffer_begin_info) }
         {
             error!(
                 "Failed to begin the command buffer when submitting an immediate structure: {:?}",
@@ -133,12 +154,12 @@ impl Immediate {
             return Err(ErrorCode::VulkanFailure);
         }
 
-        if let Err(err) = fct(vulkan_context, self.command_buffer) {
+        if let Err(err) = fct(self, immediate.command_buffer) {
             error!("Failed to run the custom submit function when submitting an immediate structure: {:?}", err);
             return Err(ErrorCode::Unknown);
         }
 
-        if let Err(err) = unsafe { device.end_command_buffer(self.command_buffer) } {
+        if let Err(err) = unsafe { device.end_command_buffer(immediate.command_buffer) } {
             error!(
                 "Failed to end the command buffer when submitting an immediate structure: {:?}",
                 err
@@ -147,14 +168,14 @@ impl Immediate {
         }
 
         let command_buffer_submit_info =
-            [CommandBufferSubmitInfo::default().command_buffer(self.command_buffer)];
+            [CommandBufferSubmitInfo::default().command_buffer(immediate.command_buffer)];
         let submit_info =
             [SubmitInfo2::default().command_buffer_infos(&command_buffer_submit_info)];
 
         // Submit command buffer to the queue and execute it
         // the render fence will now block until the graphic commands finish execution
-        let graphics_queue = vulkan_context.get_queues()?.graphics_queue.unwrap();
-        if let Err(err) = unsafe { device.queue_submit2(graphics_queue, &submit_info, self.fence) }
+        let graphics_queue = self.get_queues()?.graphics_queue.unwrap();
+        if let Err(err) = unsafe { device.queue_submit2(graphics_queue, &submit_info, immediate.fence) }
         {
             error!(
                 "Failed to submit the command buffer when submitting an immediate structure: {:?}",
@@ -165,7 +186,7 @@ impl Immediate {
 
         let timeout = 1e10 as u64;
         let should_wait_all = true;
-        if let Err(err) = unsafe { device.wait_for_fences(&[self.fence], should_wait_all, timeout) }
+        if let Err(err) = unsafe { device.wait_for_fences(&[immediate.fence], should_wait_all, timeout) }
         {
             error!(
                 "Failed to wait for fences when submitting an immediate structure: {:?}",

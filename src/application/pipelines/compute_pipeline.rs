@@ -20,7 +20,7 @@ pub struct PipelineAttributes {
     pub descriptors: Vec<Descriptor>,
     pub pipeline: Pipeline,
     pub pipeline_layout: PipelineLayout,
-    pub push_constants: PushConstant,
+    pub push_constants: Option<PushConstant>,
 }
 
 pub trait ComputePipeline {
@@ -30,6 +30,7 @@ pub trait ComputePipeline {
         vulkan_context: &VulkanContext,
         scene: &Scene,
     ) -> Result<(), ErrorCode>;
+    fn init_pool_size_ratios(&mut self, vulkan_context: &VulkanContext) -> Result<(), ErrorCode>;
     fn init_push_constants(
         &mut self,
         vulkan_context: &VulkanContext,
@@ -48,7 +49,10 @@ pub trait ComputePipeline {
             .map(|descriptor| descriptor.set_layout)
             .collect::<Vec<DescriptorSetLayout>>();
 
-        let push_constant_ranges = vec![self.get_attributes()?.push_constants.range];
+        let push_constant_ranges = match &self.get_attributes()?.push_constants {
+            None => vec![],
+            Some(push_constant) => vec![push_constant.range]
+        };
 
         let create_info = PipelineLayoutCreateInfo::default()
             .set_layouts(&set_layouts)
@@ -136,6 +140,10 @@ pub trait ComputePipeline {
         vulkan_context: &VulkanContext,
         scene: &Scene,
     ) -> Result<(), ErrorCode> {
+        if let Err(err) = self.init_pool_size_ratios(vulkan_context) {
+            error!("Failed to initialize the vulkan pool size ratios in a compute pipeline: {:?}", err);
+            return Err(ErrorCode::InitializationFailure);
+        };
         if let Err(err) = self.init_descriptors(vulkan_context, scene) {
             error!(
                 "Failed to initialize the vulkan descriptors in a compute pipeline: {:?}",
@@ -194,21 +202,5 @@ pub trait ComputePipeline {
         Ok(())
     }
 
-    fn clean(&self, vulkan_context: &VulkanContext) -> Result<(), ErrorCode> {
-        if let Err(err) = self.clean_descriptors(vulkan_context) {
-            error!(
-                "Failed to clean the vulkan descriptors in a compute pipeline: {:?}",
-                err
-            );
-            return Err(ErrorCode::CleaningFailure);
-        }
-        if let Err(err) = self.clean_pipeline(vulkan_context) {
-            error!(
-                "Failed to clean the vulkan pipeline handler in a compute pipeline: {:?}",
-                err
-            );
-            return Err(ErrorCode::CleaningFailure);
-        }
-        Ok(())
-    }
+    fn clean(&mut self, vulkan_context: &VulkanContext) -> Result<(), ErrorCode>;
 }
