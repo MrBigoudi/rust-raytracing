@@ -1,4 +1,4 @@
-use log::warn;
+// use log::warn;
 use winit::keyboard::SmolStr;
 
 pub fn winit_character_to_imgui_key(key: SmolStr) -> Option<imgui::Key> {
@@ -77,10 +77,10 @@ pub fn winit_character_to_imgui_key(key: SmolStr) -> Option<imgui::Key> {
     } else if key == "`" {
         Some(imgui::Key::GraveAccent)
     } else {
-        warn!(
-            "The winit key `{:?}' is not yet supported for imgui...",
-            key
-        );
+        // warn!(
+        //     "The winit key `{:?}' is not yet supported for imgui...",
+        //     key
+        // );
         None
     }
 }

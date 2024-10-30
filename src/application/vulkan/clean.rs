@@ -16,7 +16,10 @@ impl VulkanContext<'_> {
         }
 
         if let Err(err) = self.clean_immediate() {
-            error!("Failed to shutdown the vulkan immediate submit structures: {:?}", err);
+            error!(
+                "Failed to shutdown the vulkan immediate submit structures: {:?}",
+                err
+            );
             return Err(ErrorCode::CleaningFailure);
         } else {
             debug!("Vulkan immediate submit structures cleaned successfully !");

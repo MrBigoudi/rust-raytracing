@@ -6,10 +6,12 @@ public struct Ray {
 };
 
 public Ray get_ray(float2 pos, Camera camera){ // pos between 0 and 1
+    // pos.x and pos.y are initially in [0;1]
+    float3 pos_view_space = float3(pos - 0.5f, 1.f) * float3(camera.plane_width, -camera.plane_height, camera.plane_near);
+    float4 pos_world_space = mul(camera.inv_view, float4(pos_view_space, 1.f));
+
     Ray ray;
     ray.origin = camera.eye;
-    float3 pos_view_space = float3(pos - 0.5f, 1.f) * float3(camera.plane_width, camera.plane_height, camera.plane_near);
-    float4 pos_world_space = mul(camera.inv_view, float4(pos_view_space, 1.f));
     ray.direction = normalize(pos_world_space - ray.origin);
     ray.direction.w = 0.;
     return ray;

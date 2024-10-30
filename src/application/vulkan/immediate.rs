@@ -100,10 +100,13 @@ impl Immediate {
 
 impl VulkanContext<'_> {
     pub fn init_immediate(&mut self) -> Result<(), ErrorCode> {
-        match Immediate::init(self){
+        match Immediate::init(self) {
             Ok(immediate) => self.immediate_submit = immediate,
             Err(err) => {
-                error!("Failed to initialize the immediate submit structure: {:?}", err);
+                error!(
+                    "Failed to initialize the immediate submit structure: {:?}",
+                    err
+                );
                 return Err(ErrorCode::InitializationFailure);
             }
         }
@@ -111,7 +114,7 @@ impl VulkanContext<'_> {
     }
 
     pub fn clean_immediate(&self) -> Result<(), ErrorCode> {
-        if let Err(err) = self.immediate_submit.clean(self){
+        if let Err(err) = self.immediate_submit.clean(self) {
             error!("Failed to clean the immediate submit structure: {:?}", err);
             return Err(ErrorCode::CleaningFailure);
         }
@@ -144,9 +147,9 @@ impl VulkanContext<'_> {
         let command_buffer_begin_info =
             CommandBufferBeginInfo::default().flags(CommandBufferUsageFlags::ONE_TIME_SUBMIT);
 
-        if let Err(err) =
-            unsafe { device.begin_command_buffer(immediate.command_buffer, &command_buffer_begin_info) }
-        {
+        if let Err(err) = unsafe {
+            device.begin_command_buffer(immediate.command_buffer, &command_buffer_begin_info)
+        } {
             error!(
                 "Failed to begin the command buffer when submitting an immediate structure: {:?}",
                 err
@@ -175,7 +178,8 @@ impl VulkanContext<'_> {
         // Submit command buffer to the queue and execute it
         // the render fence will now block until the graphic commands finish execution
         let graphics_queue = self.get_queues()?.graphics_queue.unwrap();
-        if let Err(err) = unsafe { device.queue_submit2(graphics_queue, &submit_info, immediate.fence) }
+        if let Err(err) =
+            unsafe { device.queue_submit2(graphics_queue, &submit_info, immediate.fence) }
         {
             error!(
                 "Failed to submit the command buffer when submitting an immediate structure: {:?}",
@@ -186,7 +190,8 @@ impl VulkanContext<'_> {
 
         let timeout = 1e10 as u64;
         let should_wait_all = true;
-        if let Err(err) = unsafe { device.wait_for_fences(&[immediate.fence], should_wait_all, timeout) }
+        if let Err(err) =
+            unsafe { device.wait_for_fences(&[immediate.fence], should_wait_all, timeout) }
         {
             error!(
                 "Failed to wait for fences when submitting an immediate structure: {:?}",

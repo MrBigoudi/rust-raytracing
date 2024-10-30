@@ -91,6 +91,15 @@ impl ApplicationHandler for Application<'_> {
                     panic!("Failed to handle redrawing event: {:?}", err);
                 }
             }
+            WindowEvent::KeyboardInput {
+                device_id,
+                event,
+                is_synthetic,
+            } => {
+                if let Err(err) = self.on_keyboard_input(device_id, event, is_synthetic) {
+                    panic!("Failed to handle keyboard input event: {:?}", err);
+                }
+            }
             _ => (),
         }
     }

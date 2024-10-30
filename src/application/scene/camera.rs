@@ -1,4 +1,5 @@
 use glam::{Mat4, Vec3, Vec4};
+// use log::error;
 
 #[derive(Debug)]
 #[repr(C)]
@@ -22,6 +23,7 @@ pub enum CameraMovement {
     Down,
 }
 
+#[derive(Debug)]
 pub struct Camera {
     // camera Attributes
     pub eye: Vec3,
@@ -46,33 +48,19 @@ pub struct Camera {
     pub is_accelerating: bool,
 }
 
-impl Default for Camera {
-    fn default() -> Self {
-        let aspect_ratio = 16. / 9.;
-        Camera::new(
-            &Vec3::new(0., 0., -5.),
-            aspect_ratio,
-            45.,
-            0.1,
-            200.,
-            &Vec3::new(0., 1., 0.),
-        )
-    }
-}
-
 impl Camera {
     pub fn new(
-        position: &Vec3,
+        position: Vec3,
         aspect_ratio: f32,
         fov: f32,
         near: f32,
         far: f32,
-        world_up: &Vec3,
+        world_up: Vec3,
     ) -> Self {
         let mut camera = Camera {
-            eye: *position,
+            eye: position,
             at: Vec3::ZERO,
-            world_up: *world_up,
+            world_up,
             up: Vec3::ZERO,
             right: Vec3::ZERO,
             fov,
@@ -82,7 +70,7 @@ impl Camera {
             movement_acceleration: 5.,
             movement_speed: 20.,
             mouse_sensitivity: 0.1,
-            yaw: 90.,
+            yaw: -90.,
             pitch: 0.,
             is_accelerating: false,
         };
@@ -105,16 +93,29 @@ impl Camera {
     }
 
     fn get_view(&self) -> Mat4 {
-        Mat4::look_at_lh(self.eye, self.eye + self.at, self.up)
+        Mat4::look_at_rh(self.eye, self.eye + self.at, self.up).transpose()
+        // Mat4{
+        //     x_axis: Vec4::new(1., 0., 0., 0.),
+        //     y_axis: Vec4::new(0., -1., 0., 0.),
+        //     z_axis: Vec4::new(0., 0., 1., 5.),
+        //     w_axis: Vec4::new(0., 0., 0., 1.),
+        // }
     }
 
     fn get_perspective(&self) -> Mat4 {
-        Mat4::perspective_lh(
+        Mat4::perspective_rh(
             self.fov.to_radians(),
             self.aspect_ratio,
             self.near,
             self.far,
         )
+        .transpose()
+        // Mat4{
+        //     x_axis: Vec4::new(1.358, 0., 0., 0.),
+        //     y_axis: Vec4::new(0., 2.414, 0., 0.),
+        //     z_axis: Vec4::new(0., 0., -1.001, -0.2),
+        //     w_axis: Vec4::new(0., 0., -1., 0.),
+        // }
     }
 
     fn get_plane_height(&self) -> f32 {
@@ -125,7 +126,7 @@ impl Camera {
         plane_height * self.aspect_ratio
     }
 
-    pub fn process_keyboard(&mut self, direction: CameraMovement, delta_time: f64) {
+    pub fn on_keyboard_input(&mut self, direction: CameraMovement, delta_time: f64) {
         let mut velocity = self.movement_speed * (delta_time as f32);
         if self.is_accelerating {
             velocity *= self.movement_acceleration;
@@ -141,7 +142,7 @@ impl Camera {
         };
     }
 
-    pub fn process_mouse_movement(&mut self, x_offset: f32, y_offset: f32, constrain_pitch: bool) {
+    pub fn on_mouse_input(&mut self, x_offset: f32, y_offset: f32, constrain_pitch: bool) {
         let x_offset = x_offset * self.mouse_sensitivity;
         let y_offset = y_offset * self.mouse_sensitivity;
         self.yaw += x_offset;
@@ -154,18 +155,25 @@ impl Camera {
         self.update_vectors();
     }
 
+    pub fn on_resize(&mut self, new_width: u16, new_height: u16) {
+        self.aspect_ratio = (new_width as f32) / (new_height as f32);
+    }
+
     pub fn get_gpu_data(&self) -> CameraGPU {
-        let view_mat = self.get_view();
-        let proj_mat = self.get_perspective();
+        let view_matrix = self.get_view();
+        let projection_matrix = self.get_perspective();
         let plane_height = self.get_plane_height();
         let plane_width = self.get_plane_width(plane_height);
+        let view_matrix_inverse = Mat4::inverse(&Mat4::transpose(&view_matrix));
+        let projection_matrix_inverse = Mat4::inverse(&Mat4::transpose(&projection_matrix));
+        let position = Vec4::new(self.eye.x, self.eye.y, self.eye.z, 1.);
 
         CameraGPU {
-            view_matrix: view_mat,
-            projection_matrix: proj_mat,
-            view_matrix_inverse: Mat4::inverse(&view_mat),
-            projection_matrix_inverse: Mat4::inverse(&proj_mat),
-            position: Vec4::new(self.eye.x, self.eye.y, self.eye.z, 1.),
+            view_matrix,
+            projection_matrix,
+            view_matrix_inverse,
+            projection_matrix_inverse,
+            position,
             plane_width,
             plane_height,
             plane_near: self.near,

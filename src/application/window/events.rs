@@ -1,5 +1,8 @@
 use log::{debug, error, warn};
-use winit::dpi::PhysicalSize;
+use winit::{
+    dpi::PhysicalSize,
+    event::{DeviceId, KeyEvent},
+};
 
 use crate::application::{core::error::ErrorCode, Application};
 
@@ -31,13 +34,21 @@ impl Application<'_> {
     }
 
     pub fn on_resize(&mut self, new_physical_size: PhysicalSize<u32>) -> Result<(), ErrorCode> {
-        self.parameters.window_width = new_physical_size.width as u16;
-        self.parameters.window_height = new_physical_size.height as u16;
+        let new_width = new_physical_size.width as u16;
+        let new_height = new_physical_size.height as u16;
+
+        self.parameters.window_width = new_width;
+        self.parameters.window_height = new_height;
         if let Some(vulkan_context) = &mut self.vulkan_context {
-            vulkan_context.parameters.window_width = new_physical_size.width as u16;
-            vulkan_context.parameters.window_height = new_physical_size.height as u16;
+            vulkan_context.parameters.window_width = new_height;
+            vulkan_context.parameters.window_height = new_width;
         } else {
             warn!("The vulkan context is not initialized correctly...");
+        }
+        if let Some(scene) = &mut self.scene {
+            scene.camera.on_resize(new_width, new_height);
+        } else {
+            warn!("The vulkan scene is not initialized correctly...");
         }
         Ok(())
     }
@@ -62,6 +73,27 @@ impl Application<'_> {
             }
         } else {
             warn!("The vulkan context is not initialized correctly...");
+        }
+        Ok(())
+    }
+
+    pub fn on_keyboard_input(
+        &mut self,
+        device_id: DeviceId,
+        event: KeyEvent,
+        is_synthetic: bool,
+    ) -> Result<(), ErrorCode> {
+        let delta_time = self.delta_time.as_secs_f64();
+        if let Some(scene) = &mut self.scene {
+            if let Err(err) = scene.on_keyboard_input(device_id, event, is_synthetic, delta_time) {
+                error!(
+                    "Failed to handle keyboard input event in the scene: {:?}",
+                    err
+                );
+                return Err(ErrorCode::Unknown);
+            }
+        } else {
+            warn!("The vulkan scene is not initialized correctly...");
         }
         Ok(())
     }

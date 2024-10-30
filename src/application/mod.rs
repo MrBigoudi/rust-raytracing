@@ -68,7 +68,13 @@ impl Application<'_> {
         };
 
         debug!("Initializing the scene...");
-        let scene = Scene::default();
+        let scene = match Scene::init(&vulkan_context) {
+            Ok(scene) => scene,
+            Err(err) => {
+                error!("Failed to initialize the scene: {:?}", err);
+                return Err(ErrorCode::InitializationFailure);
+            }
+        };
 
         debug!("Initializing the pipelines...");
         let pipelines = match Pipelines::init(&vulkan_context, &scene) {

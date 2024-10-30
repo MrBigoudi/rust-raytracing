@@ -45,20 +45,21 @@ static const int THREAD_GROUP_SIZE_Z = 1;
 void main(uint3 thread_id : SV_DispatchThreadID) {
     uint2 texel_coord = thread_id.xy;
 
-    uint2 size = uint2(0, 0); 
-    _Framebuffer.GetDimensions(size.x, size.y);
+    uint2 image_size = uint2(0, 0);
+    _Framebuffer.GetDimensions(image_size.x, image_size.y);
 
     float2 pixel_position = float2(0.f);
-    pixel_position.x = float(texel_coord.x) / float(size.x);
-    pixel_position.y = float(texel_coord.y) / float(size.y);
-    if (pixel_position.x > 1. || pixel_position.x < 0 
-        || pixel_position.y > 1. || pixel_position.y < 0) {
+    pixel_position.x = float(texel_coord.x) / float(image_size.x);
+    pixel_position.y = float(texel_coord.y) / float(image_size.y);
+    if (pixel_position.x >= 1. || pixel_position.x < 0 
+        || pixel_position.y >= 1. || pixel_position.y < 0) {
         return;
     }
 
     Ray ray = get_ray(pixel_position, _Camera);
+    // Ray ray = get_ray(pixel_position, Camera());
 
-    // no bvh
+    // No bvh
     Hit closest_hit;
     closest_hit.did_hit = 0;
     uint nb_triangles = 1;

@@ -51,7 +51,7 @@ pub trait ComputePipeline {
 
         let push_constant_ranges = match &self.get_attributes()?.push_constants {
             None => vec![],
-            Some(push_constant) => vec![push_constant.range]
+            Some(push_constant) => vec![push_constant.range],
         };
 
         let create_info = PipelineLayoutCreateInfo::default()
@@ -141,7 +141,10 @@ pub trait ComputePipeline {
         scene: &Scene,
     ) -> Result<(), ErrorCode> {
         if let Err(err) = self.init_pool_size_ratios(vulkan_context) {
-            error!("Failed to initialize the vulkan pool size ratios in a compute pipeline: {:?}", err);
+            error!(
+                "Failed to initialize the vulkan pool size ratios in a compute pipeline: {:?}",
+                err
+            );
             return Err(ErrorCode::InitializationFailure);
         };
         if let Err(err) = self.init_descriptors(vulkan_context, scene) {

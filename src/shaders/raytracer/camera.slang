@@ -13,7 +13,7 @@ public struct Camera {
     public float plane_near;
 
     public __init() {
-        eye = float4(0.f, 0.f, 10.f, 1.f); // Position the camera at the origin
+        eye = float4(0.f, 0.f, -1.f, 1.f); // Position the camera at the origin
 
         view = IDENTITY_MATRIX; // Identity projection matrix
         proj = IDENTITY_MATRIX; // Identity projection matrix

@@ -213,10 +213,7 @@ impl ComputePipeline for TestPipeline {
         Ok(())
     }
 
-    fn init_pool_size_ratios(
-        &mut self,
-        vulkan_context: &VulkanContext,
-    ) -> Result<(), ErrorCode> {
+    fn init_pool_size_ratios(&mut self, vulkan_context: &VulkanContext) -> Result<(), ErrorCode> {
         let pool_size_ratios = [
             // Framebuffer
             DescriptorPoolSizeRatio {

@@ -10,13 +10,15 @@ use ash::{
 use crate::application::parameters::ApplicationParameters;
 
 use super::{
-    gui::GuiWrapper, immediate::Immediate, setup::{
+    gui::GuiWrapper,
+    immediate::Immediate,
+    setup::{
         allocator::AllocatorWrapper,
         devices::{device_requirements::DeviceRequirements, physical_device::PhysicalDeviceInfo},
         draw_resources::AllocatedImage,
         frame_data::VulkanFrameData,
         swapchain::handler::SwapchainHandler,
-    }
+    },
 };
 
 #[derive(Default)]

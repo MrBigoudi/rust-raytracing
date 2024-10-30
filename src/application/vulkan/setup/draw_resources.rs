@@ -100,6 +100,9 @@ impl VulkanContext<'_> {
             allocation,
         });
 
+        self.draw_extent.width = image_extent.width;
+        self.draw_extent.height = image_extent.height;
+
         Ok(())
     }
 

@@ -12,6 +12,7 @@ pub struct Triangle {
 impl Default for Triangle {
     fn default() -> Self {
         Self {
+            // CCW
             p0: Vec4::from_array([-1., 0., 0., 1.]),
             p1: Vec4::from_array([1., 0., 0., 1.]),
             p2: Vec4::from_array([0., 1., 0., 1.]),

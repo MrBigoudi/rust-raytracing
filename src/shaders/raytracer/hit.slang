@@ -18,39 +18,55 @@ public Hit ray_triangle_intersection(Ray ray, uint triangle_index, RWStructuredB
     float3 p1 = mul(models[triangle.model_index].model_matrix, triangle.p1).xyz;
     float3 p2 = mul(models[triangle.model_index].model_matrix, triangle.p2).xyz;
 
-    float3 tri_edge_0 = p1 - p0;
-    float3 tri_edge_1 = p2 - p0;
-    float3 tri_normale = normalize(cross(tri_edge_0, tri_edge_1));
+    float3 e0 = p1 - p0;
+    float3 e1 = p2 - p0;
 
-    float3 q = cross(ray.direction.xyz, tri_edge_1);
-    float a = dot(tri_edge_0, q);
+    float3 w = ray.direction.xyz;
+    float3 o = ray.origin.xyz;
+
+    float3 tmp = cross(e1, e0);
+    if (length(tmp) == 0.f) {
+        hit.did_hit = 0;
+        return hit;
+    }
+
+    float3 n = normalize(tmp);
+    float3 q = cross(w, e1);
+    float a = dot(e0, q);
+
+    // CCW
+    if (dot(n, w) >= 0.) {
+        hit.did_hit = 0;
+        return hit;
+    }
     float epsilon = 1e-4;
-
-    if(dot(tri_normale, ray.direction.xyz) >= 0 || abs(a) < epsilon){
+    if (abs(a) < epsilon) {
         hit.did_hit = 0;
         return hit;
     }
 
-    float4 s = (ray.origin - float4(p0, 1.f)) / a;
-    float3 r = cross(s.xyz, tri_edge_0);
+    float3 s = (o - p0) / a;
+    float3 r = cross(s, e0);
 
-    hit.coords.x = dot(s.xyz, q);
-    hit.coords.y = dot(r, ray.direction.xyz);
-    hit.coords.z = 1 - hit.coords.x - hit.coords.y;
-
-    if(hit.coords.x < 0 || hit.coords.y < 0 || hit.coords.z < 0){
-        hit.did_hit = 0;
-        return hit;
-    }
-    
-    float t = dot(tri_edge_1, r);
-    if(t < 0){
+    float b0 = dot(s, q);
+    float b1 = dot(r, w);
+    float b2 = 1 - b0 - b1;
+    if (b0 < 0 || b1 < 0 || b2 < 0) {
         hit.did_hit = 0;
         return hit;
     }
 
-    hit.did_hit = 1;
+    float t = dot(e1, r);
+    if (t < 1e-3 || t > 1e6) {
+        hit.did_hit = 0;
+        return hit;
+    }
+
+    hit.coords.x = b2;
+    hit.coords.y = b0;
+    hit.coords.z = b1;
     hit.coords.w = t;
+    hit.did_hit = 1;
     hit.triangle_index = triangle_index;
 
     return hit;

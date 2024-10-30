@@ -1,7 +1,25 @@
-use ash::vk::{BufferUsageFlags, DescriptorBufferInfo, DescriptorImageInfo, DescriptorSetLayoutCreateFlags, DescriptorType, ImageLayout, Pipeline, PipelineBindPoint, PipelineLayout, ShaderStageFlags, WriteDescriptorSet, WHOLE_SIZE};
+use ash::vk::{
+    BufferUsageFlags, DescriptorBufferInfo, DescriptorImageInfo, DescriptorSetLayoutCreateFlags,
+    DescriptorType, ImageLayout, Pipeline, PipelineBindPoint, PipelineLayout, ShaderStageFlags,
+    WriteDescriptorSet, WHOLE_SIZE,
+};
 use log::{error, warn};
 
-use crate::application::{core::error::ErrorCode, pipelines::{compute_pipeline::{ComputePipeline, PipelineAttributes}, descriptor::Descriptor}, scene::Scene, vulkan::{descriptors_helper::{allocator::DescriptorPoolSizeRatio, buffer::AllocatedBuffer, layout_builder::DescriptorLayoutBuilder}, types::VulkanContext}};
+use crate::application::{
+    core::error::ErrorCode,
+    pipelines::{
+        compute_pipeline::{ComputePipeline, PipelineAttributes},
+        descriptor::Descriptor,
+    },
+    scene::Scene,
+    vulkan::{
+        descriptors_helper::{
+            allocator::DescriptorPoolSizeRatio, buffer::AllocatedBuffer,
+            layout_builder::DescriptorLayoutBuilder,
+        },
+        types::VulkanContext,
+    },
+};
 
 pub struct RaytracingPipeline {
     pub base: PipelineAttributes,
@@ -16,53 +34,64 @@ pub struct RaytracingBuffers {
 }
 
 impl RaytracingPipeline {
-    fn init_buffers(vulkan_context: &VulkanContext, scene: &Scene) -> Result<RaytracingBuffers, ErrorCode> {
-        let triangles_ssbo = match vulkan_context.map_data_to_buffer(
-            scene.triangles.as_slice(),
-            BufferUsageFlags::STORAGE_BUFFER
-        ){
+    fn init_buffers(
+        vulkan_context: &VulkanContext,
+        scene: &Scene,
+    ) -> Result<RaytracingBuffers, ErrorCode> {
+        let triangles_ssbo = match vulkan_context
+            .map_data_to_buffer(scene.triangles.as_slice(), BufferUsageFlags::STORAGE_BUFFER)
+        {
             Ok(buffer) => buffer,
             Err(err) => {
-                error!("Failed to create the triangles ssbo for the raytracing pipeline: {:?}", err);
+                error!(
+                    "Failed to create the triangles ssbo for the raytracing pipeline: {:?}",
+                    err
+                );
                 return Err(ErrorCode::InitializationFailure);
             }
         };
 
-        let models_ssbo = match vulkan_context.map_data_to_buffer(
-            scene.models.as_slice(),
-            BufferUsageFlags::STORAGE_BUFFER
-        ){
+        let models_ssbo = match vulkan_context
+            .map_data_to_buffer(scene.models.as_slice(), BufferUsageFlags::STORAGE_BUFFER)
+        {
             Ok(buffer) => buffer,
             Err(err) => {
-                error!("Failed to create the models ssbo for the raytracing pipeline: {:?}", err);
+                error!(
+                    "Failed to create the models ssbo for the raytracing pipeline: {:?}",
+                    err
+                );
                 return Err(ErrorCode::InitializationFailure);
             }
         };
-        
-        let materials_ssbo = match vulkan_context.map_data_to_buffer(
-            scene.materials.as_slice(),
-            BufferUsageFlags::STORAGE_BUFFER
-        ){
+
+        let materials_ssbo = match vulkan_context
+            .map_data_to_buffer(scene.materials.as_slice(), BufferUsageFlags::STORAGE_BUFFER)
+        {
             Ok(buffer) => buffer,
             Err(err) => {
-                error!("Failed to create the materials ssbo for the raytracing pipeline: {:?}", err);
+                error!(
+                    "Failed to create the materials ssbo for the raytracing pipeline: {:?}",
+                    err
+                );
                 return Err(ErrorCode::InitializationFailure);
             }
         };
 
         let camera_ubo = match vulkan_context.map_data_to_buffer(
             &[scene.camera.get_gpu_data()],
-            BufferUsageFlags::UNIFORM_BUFFER
-        ){
+            BufferUsageFlags::UNIFORM_BUFFER,
+        ) {
             Ok(buffer) => buffer,
             Err(err) => {
-                error!("Failed to create the camera ubo for the raytracing pipeline: {:?}", err);
+                error!(
+                    "Failed to create the camera ubo for the raytracing pipeline: {:?}",
+                    err
+                );
                 return Err(ErrorCode::InitializationFailure);
             }
         };
 
-
-        Ok(RaytracingBuffers{
+        Ok(RaytracingBuffers {
             triangles_ssbo,
             models_ssbo,
             materials_ssbo,
@@ -72,20 +101,32 @@ impl RaytracingPipeline {
 
     fn clean_buffers(&mut self, vulkan_context: &VulkanContext) -> Result<(), ErrorCode> {
         let allocator = &vulkan_context.get_allocator()?.allocator;
-        if let Err(err) = self.buffers.triangles_ssbo.clean(&allocator){
-            error!("Failed to clean the triangles buffer in the raytracing pipeline: {:?}", err);
+        if let Err(err) = self.buffers.triangles_ssbo.clean(allocator) {
+            error!(
+                "Failed to clean the triangles buffer in the raytracing pipeline: {:?}",
+                err
+            );
             return Err(ErrorCode::CleaningFailure);
         }
-        if let Err(err) = self.buffers.models_ssbo.clean(&allocator){
-            error!("Failed to clean the models buffer in the raytracing pipeline: {:?}", err);
+        if let Err(err) = self.buffers.models_ssbo.clean(allocator) {
+            error!(
+                "Failed to clean the models buffer in the raytracing pipeline: {:?}",
+                err
+            );
             return Err(ErrorCode::CleaningFailure);
         }
-        if let Err(err) = self.buffers.materials_ssbo.clean(&allocator){
-            error!("Failed to clean the materials buffer in the raytracing pipeline: {:?}", err);
+        if let Err(err) = self.buffers.materials_ssbo.clean(allocator) {
+            error!(
+                "Failed to clean the materials buffer in the raytracing pipeline: {:?}",
+                err
+            );
             return Err(ErrorCode::CleaningFailure);
         }
-        if let Err(err) = self.buffers.camera_ubo.clean(&allocator){
-            error!("Failed to clean the camera buffer in the raytracing pipeline: {:?}", err);
+        if let Err(err) = self.buffers.camera_ubo.clean(allocator) {
+            error!(
+                "Failed to clean the camera buffer in the raytracing pipeline: {:?}",
+                err
+            );
             return Err(ErrorCode::CleaningFailure);
         }
         Ok(())
@@ -94,10 +135,7 @@ impl RaytracingPipeline {
     pub fn new(vulkan_context: &VulkanContext, scene: &Scene) -> Result<Self, ErrorCode> {
         let base = PipelineAttributes::default();
         let buffers = Self::init_buffers(vulkan_context, scene)?;
-        Ok(RaytracingPipeline{
-            base,
-            buffers,
-        })
+        Ok(RaytracingPipeline { base, buffers })
     }
 
     fn init_set_0(
@@ -141,32 +179,27 @@ impl RaytracingPipeline {
         let descriptor_framebuffer_info = [DescriptorImageInfo::default()
             // Image data we want to bind (here the image we want to draw into)
             .image_view(vulkan_context.get_draw_image()?.image_view)
-            .image_layout(ImageLayout::GENERAL)
-        ];
+            .image_layout(ImageLayout::GENERAL)];
         // Triangles
         let descriptor_triangles_info = [DescriptorBufferInfo::default()
             .buffer(self.buffers.triangles_ssbo.buffer)
             .range(WHOLE_SIZE)
-            .offset(0)
-        ];
+            .offset(0)];
         // Models
         let descriptor_models_info = [DescriptorBufferInfo::default()
             .buffer(self.buffers.models_ssbo.buffer)
             .range(WHOLE_SIZE)
-            .offset(0)
-        ];
+            .offset(0)];
         // Materials
         let descriptor_materials_info = [DescriptorBufferInfo::default()
             .buffer(self.buffers.materials_ssbo.buffer)
             .range(WHOLE_SIZE)
-            .offset(0)
-        ];
+            .offset(0)];
         // Camera
         let descriptor_camera_info = [DescriptorBufferInfo::default()
             .buffer(self.buffers.camera_ubo.buffer)
             .range(WHOLE_SIZE)
-            .offset(0)
-        ];
+            .offset(0)];
 
         // Updates to perform
         let writes_descriptor_set = [
@@ -177,40 +210,35 @@ impl RaytracingPipeline {
                 .dst_binding(0)
                 .descriptor_count(1)
                 .descriptor_type(DescriptorType::STORAGE_IMAGE)
-                .image_info(&descriptor_framebuffer_info)
-            ,
+                .image_info(&descriptor_framebuffer_info),
             // Triangles
             WriteDescriptorSet::default()
                 .dst_set(descriptor_set)
                 .dst_binding(1)
                 .descriptor_count(1)
                 .descriptor_type(DescriptorType::STORAGE_BUFFER)
-                .buffer_info(&descriptor_triangles_info)
-            ,
+                .buffer_info(&descriptor_triangles_info),
             // Models
             WriteDescriptorSet::default()
                 .dst_set(descriptor_set)
                 .dst_binding(2)
                 .descriptor_count(1)
                 .descriptor_type(DescriptorType::STORAGE_BUFFER)
-                .buffer_info(&descriptor_models_info)
-            ,
+                .buffer_info(&descriptor_models_info),
             // Materials
             WriteDescriptorSet::default()
                 .dst_set(descriptor_set)
                 .dst_binding(3)
                 .descriptor_count(1)
                 .descriptor_type(DescriptorType::STORAGE_BUFFER)
-                .buffer_info(&descriptor_materials_info)
-            ,
+                .buffer_info(&descriptor_materials_info),
             // Camera
             WriteDescriptorSet::default()
                 .dst_set(descriptor_set)
                 .dst_binding(4)
                 .descriptor_count(1)
                 .descriptor_type(DescriptorType::UNIFORM_BUFFER)
-                .buffer_info(&descriptor_camera_info)
-            ,
+                .buffer_info(&descriptor_camera_info),
         ];
 
         unsafe { device.update_descriptor_sets(&writes_descriptor_set, &[]) };
@@ -290,8 +318,8 @@ impl ComputePipeline for RaytracingPipeline {
         unsafe {
             device.cmd_dispatch(
                 command_buffer,
-                vulkan_context.draw_extent.width / thread_group_size_x,
-                vulkan_context.draw_extent.height / thread_group_size_y,
+                vulkan_context.draw_extent.width / thread_group_size_x + 1,
+                vulkan_context.draw_extent.height / thread_group_size_y + 1,
                 thread_group_size_z,
             )
         };
@@ -305,7 +333,7 @@ impl ComputePipeline for RaytracingPipeline {
     fn set_pipeline_layout(&mut self, pipeline_layout: PipelineLayout) {
         self.base.pipeline_layout = pipeline_layout;
     }
-    
+
     fn init_pool_size_ratios(&mut self, vulkan_context: &VulkanContext) -> Result<(), ErrorCode> {
         // TODO: add other things
         let pool_size_ratios = [
@@ -347,8 +375,11 @@ impl ComputePipeline for RaytracingPipeline {
     }
 
     fn clean(&mut self, vulkan_context: &VulkanContext) -> Result<(), ErrorCode> {
-        if let Err(err) = self.clean_buffers(vulkan_context){
-            error!("Failed to clean the buffers in the raytracing pipeline: {:?}", err);
+        if let Err(err) = self.clean_buffers(vulkan_context) {
+            error!(
+                "Failed to clean the buffers in the raytracing pipeline: {:?}",
+                err
+            );
             return Err(ErrorCode::CleaningFailure);
         }
         if let Err(err) = self.clean_descriptors(vulkan_context) {
