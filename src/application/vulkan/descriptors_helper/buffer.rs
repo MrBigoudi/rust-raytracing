@@ -8,6 +8,7 @@ use vk_mem::{
 
 use crate::application::{core::error::ErrorCode, vulkan::types::VulkanContext};
 
+
 pub struct AllocatedBuffer {
     pub buffer: Buffer,
     pub allocation: Allocation,
@@ -62,6 +63,31 @@ impl AllocatedBuffer {
 }
 
 impl VulkanContext<'_> {
+    pub fn update_buffer<T>(
+        &self, 
+        dst_buffer: &AllocatedBuffer,
+        data: &[T],
+        offset: u64,
+    )-> Result<(), ErrorCode> {
+        // Run a GPU side command to perform the copy using the immediate submit
+        if let Err(err) = self.immediate_submit(&|vulkan_context, cmd| {
+            unsafe {
+                let data_size = std::mem::size_of_val(data);
+                let input_slice = std::slice::from_raw_parts(data.as_ptr() as *const u8, data_size);
+                let device = vulkan_context.get_device()?;
+                device.cmd_update_buffer(cmd, dst_buffer.buffer, offset, input_slice);
+            };
+            Ok(())
+        }) {
+            error!(
+                "Failed to send an immediate submit command when updating buffers: {:?}",
+                err
+            );
+            return Err(ErrorCode::Unknown);
+        }
+        Ok(())
+    }
+
     fn copy_buffer_cpu<T>(
         &self,
         dst_buffer: &AllocatedBuffer,

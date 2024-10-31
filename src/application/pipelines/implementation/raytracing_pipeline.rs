@@ -1,7 +1,5 @@
 use ash::vk::{
-    BufferUsageFlags, DescriptorBufferInfo, DescriptorImageInfo, DescriptorSetLayoutCreateFlags,
-    DescriptorType, ImageLayout, Pipeline, PipelineBindPoint, PipelineLayout, ShaderStageFlags,
-    WriteDescriptorSet, WHOLE_SIZE,
+    BufferUsageFlags, DescriptorBufferInfo, DescriptorImageInfo, DescriptorSet, DescriptorSetLayoutCreateFlags, DescriptorType, ImageLayout, Pipeline, PipelineBindPoint, PipelineLayout, ShaderStageFlags, WriteDescriptorSet, WHOLE_SIZE
 };
 use log::{error, warn};
 
@@ -34,6 +32,16 @@ pub struct RaytracingBuffers {
 }
 
 impl RaytracingPipeline {
+    pub fn update_camera_buffer(&mut self, vulkan_context: &VulkanContext, scene: &Scene) -> Result<(), ErrorCode> {
+        let dst_offset = 0;
+        let data = [scene.camera.get_gpu_data()];
+        if let Err(err) = vulkan_context.update_buffer(&self.buffers.camera_ubo, &data, dst_offset){
+            error!("Failed to update a vulkan buffer: {:?}", err);
+            return Err(ErrorCode::VulkanFailure);
+        }
+        Ok(())
+    }
+
     fn init_buffers(
         vulkan_context: &VulkanContext,
         scene: &Scene,
@@ -154,8 +162,6 @@ impl RaytracingPipeline {
         layout_builder.add_binding(2, DescriptorType::STORAGE_BUFFER)?;
         // Materials
         layout_builder.add_binding(3, DescriptorType::STORAGE_BUFFER)?;
-        // Camera
-        layout_builder.add_binding(4, DescriptorType::UNIFORM_BUFFER)?;
 
         // Build the layout
         let device = vulkan_context.get_device()?;
@@ -195,11 +201,6 @@ impl RaytracingPipeline {
             .buffer(self.buffers.materials_ssbo.buffer)
             .range(WHOLE_SIZE)
             .offset(0)];
-        // Camera
-        let descriptor_camera_info = [DescriptorBufferInfo::default()
-            .buffer(self.buffers.camera_ubo.buffer)
-            .range(WHOLE_SIZE)
-            .offset(0)];
 
         // Updates to perform
         let writes_descriptor_set = [
@@ -232,10 +233,58 @@ impl RaytracingPipeline {
                 .descriptor_count(1)
                 .descriptor_type(DescriptorType::STORAGE_BUFFER)
                 .buffer_info(&descriptor_materials_info),
+        ];
+
+        unsafe { device.update_descriptor_sets(&writes_descriptor_set, &[]) };
+
+        Ok(Descriptor {
+            set: descriptor_set,
+            set_layout: descriptor_set_layout,
+        })
+    }
+
+    fn init_set_1(
+        &mut self,
+        vulkan_context: &VulkanContext,
+        _scene: &Scene,
+    ) -> Result<Descriptor, ErrorCode> {
+        // Organize the set layout
+        let mut layout_builder = DescriptorLayoutBuilder::default();
+        // TODO: add other things
+        // Camera
+        layout_builder.add_binding(0, DescriptorType::UNIFORM_BUFFER)?;
+
+        // Build the layout
+        let device = vulkan_context.get_device()?;
+        let allocation_callback = vulkan_context.get_allocation_callback()?;
+        let descriptor_set_layout = layout_builder.build(
+            device,
+            allocation_callback,
+            ShaderStageFlags::COMPUTE,
+            DescriptorSetLayoutCreateFlags::empty(),
+        )?;
+
+        // Allocate the set
+        let descriptor_set = self
+            .base
+            .descriptor_allocator
+            .allocate(device, descriptor_set_layout)?;
+
+        // Send the data to the GPU
+        // TODO: add other things
+        // Camera
+        let descriptor_camera_info = [DescriptorBufferInfo::default()
+            .buffer(self.buffers.camera_ubo.buffer)
+            .range(WHOLE_SIZE)
+            .offset(0)];
+
+        // Updates to perform
+        let writes_descriptor_set = [
+            // TODO: add other things
             // Camera
             WriteDescriptorSet::default()
                 .dst_set(descriptor_set)
-                .dst_binding(4)
+                .dst_binding(0)
                 .descriptor_count(1)
                 .descriptor_type(DescriptorType::UNIFORM_BUFFER)
                 .buffer_info(&descriptor_camera_info),
@@ -260,6 +309,7 @@ impl ComputePipeline for RaytracingPipeline {
         vulkan_context: &VulkanContext,
         scene: &Scene,
     ) -> Result<(), ErrorCode> {
+        // Set 0
         let set_0 = match self.init_set_0(vulkan_context, scene) {
             Ok(set) => set,
             Err(err) => {
@@ -271,6 +321,19 @@ impl ComputePipeline for RaytracingPipeline {
             }
         };
         self.base.descriptors.push(set_0);
+
+        // Set 1
+        let set_1 = match self.init_set_1(vulkan_context, scene) {
+            Ok(set) => set,
+            Err(err) => {
+                error!(
+                    "Failed to initialize the descriptor set 1 in the raytracing pipeline: {:?}",
+                    err
+                );
+                return Err(ErrorCode::InitializationFailure);
+            }
+        };
+        self.base.descriptors.push(set_1);
         Ok(())
     }
 
@@ -283,7 +346,13 @@ impl ComputePipeline for RaytracingPipeline {
         Ok(())
     }
 
-    fn run(&mut self, vulkan_context: &VulkanContext, _scene: &Scene) -> Result<(), ErrorCode> {
+    fn run(&mut self, vulkan_context: &VulkanContext, scene: &Scene) -> Result<(), ErrorCode> {
+        // Update camera
+        if let Err(err) = self.update_camera_buffer(vulkan_context, scene){
+            error!("Failed to update the camera UBO in the raytracing pipeline: {:?}", err);
+            return Err(ErrorCode::Unknown);
+        };
+
         let device = vulkan_context.get_device()?;
         let command_buffer = vulkan_context.get_current_frame()?.main_command_buffer;
 
@@ -296,14 +365,15 @@ impl ComputePipeline for RaytracingPipeline {
             )
         };
 
-        // Bind the descriptor set containing the storage image
+        // Bind the descriptor sets
+        let descriptor_sets = self.base.descriptors.iter().map(|d| d.set).collect::<Vec<DescriptorSet>>();
         unsafe {
             device.cmd_bind_descriptor_sets(
                 command_buffer,
                 PipelineBindPoint::COMPUTE,
                 self.base.pipeline_layout,
                 0,
-                &[self.base.descriptors[0].set],
+                &descriptor_sets,
                 &[],
             )
         };

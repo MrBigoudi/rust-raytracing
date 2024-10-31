@@ -3,7 +3,6 @@
 ## To fix
 
 - Validation error: Immediate submit buffer destruction (maybe ImGui error ?)
-- Put the camera into set2 to update it every frame
 
 ## To add
 

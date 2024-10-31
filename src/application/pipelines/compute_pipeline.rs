@@ -56,7 +56,8 @@ pub trait ComputePipeline {
 
         let create_info = PipelineLayoutCreateInfo::default()
             .set_layouts(&set_layouts)
-            .push_constant_ranges(&push_constant_ranges);
+            .push_constant_ranges(&push_constant_ranges)
+        ;
 
         let device = vulkan_context.get_device()?;
         let allocation_callback = vulkan_context.get_allocation_callback()?;
@@ -65,7 +66,7 @@ pub trait ComputePipeline {
                 Ok(layout) => layout,
                 Err(err) => {
                     error!(
-                        "Failed to create a pipeline layout for the test pipeline: {:?}",
+                        "Failed to create a pipeline layout for the current compute pipeline: {:?}",
                         err
                     );
                     return Err(ErrorCode::VulkanFailure);

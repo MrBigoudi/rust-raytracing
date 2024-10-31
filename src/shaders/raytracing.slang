@@ -29,8 +29,8 @@ static const int DESCRIPTOR_BINDING_MATERIALS = 3;
 RWStructuredBuffer<Material> _Materials;
 
 //////////// CAMERA
-static const int DESCRIPTOR_SET_CAMERA_UBO = 0;
-static const int DESCRIPTOR_BINDING_CAMERA_UBO = 4;
+static const int DESCRIPTOR_SET_CAMERA_UBO = 1;
+static const int DESCRIPTOR_BINDING_CAMERA_UBO = 0;
 [[vk::binding(DESCRIPTOR_BINDING_CAMERA_UBO, DESCRIPTOR_SET_CAMERA_UBO)]]
 ConstantBuffer<Camera> _Camera;
 
