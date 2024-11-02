@@ -1,15 +1,14 @@
 use core::error::ErrorCode;
-use std::time::{Duration, Instant};
+use std::{collections::HashMap, time::{Duration, Instant}};
 
-use log::{debug, error};
+use log::{debug, error, warn};
 use parameters::ApplicationParameters;
 use pipelines::Pipelines;
 use scene::Scene;
 use vulkan::types::VulkanContext;
-use window::init::WindowContext;
+use window::{init::WindowContext, key_map::{Key, KeyState}};
 use winit::{
-    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
-    window::Window,
+    dpi::LogicalPosition, event_loop::{ActiveEventLoop, ControlFlow, EventLoop}, window::Window
 };
 
 mod core;
@@ -28,6 +27,8 @@ pub struct Application<'a> {
     pipelines: Option<Pipelines>,
     last_frame: Instant,
     delta_time: Duration,
+    keys: HashMap<Key, KeyState>,
+    mouse_position: Option<LogicalPosition<f64>>,
 }
 
 impl Default for Application<'_> {
@@ -40,6 +41,8 @@ impl Default for Application<'_> {
             pipelines: Default::default(),
             last_frame: Instant::now(),
             delta_time: Default::default(),
+            keys: Default::default(),
+            mouse_position: None,
         }
     }
 }
@@ -111,6 +114,24 @@ impl Application<'_> {
             return Err(ErrorCode::Unknown);
         }
 
+        Ok(())
+    }
+
+    fn update(&mut self) -> Result<(), ErrorCode>{
+        // Update delta time
+        let now = Instant::now();
+        self.delta_time = now - self.last_frame;
+        self.last_frame = now;
+
+        // Update the scene
+        if let Some(ref mut scene) = &mut self.scene {
+            if let Err(err) = scene.update(self.delta_time.as_secs_f64(), &self.keys){
+                error!("Failed to update the scene when updating the application: {:?}", err);
+                return Err(ErrorCode::Unknown);
+            }
+        } else {
+            warn!("The scene is not initialized correctly...");
+        }
         Ok(())
     }
 }

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use camera::{Camera, CameraMovement};
 use glam::Vec3;
 // use log::error;
@@ -8,7 +10,7 @@ use winit::{
     dpi::LogicalPosition, event::{DeviceId, ElementState, KeyEvent}, keyboard::{KeyCode, PhysicalKey}
 };
 
-use super::{core::error::ErrorCode, vulkan::types::VulkanContext};
+use super::{core::error::ErrorCode, vulkan::types::VulkanContext, window::key_map::{Key, KeyState}};
 
 pub mod camera;
 pub mod material;
@@ -20,7 +22,6 @@ pub struct Scene {
     pub models: Vec<Model>,
     pub materials: Vec<Material>,
     pub camera: Camera,
-    pub mouse_position: Option<LogicalPosition<f64>>,
 }
 
 impl Scene {
@@ -45,8 +46,30 @@ impl Scene {
             models,
             materials,
             camera,
-            mouse_position: None
         })
+    }
+
+    pub fn update(&mut self, delta_time: f64, keys: &HashMap<Key, KeyState>) -> Result<(), ErrorCode> {
+        // Move the camera
+        if keys.contains_key(&Key::W) && (keys.get(&Key::W).unwrap() == &KeyState::Pressed) {
+            self.camera.on_keyboard_input(CameraMovement::Forward, delta_time);
+        }
+        if keys.contains_key(&Key::S) && (keys.get(&Key::S).unwrap() == &KeyState::Pressed) {
+            self.camera.on_keyboard_input(CameraMovement::Backward, delta_time);
+        }
+        if keys.contains_key(&Key::A) && (keys.get(&Key::A).unwrap() == &KeyState::Pressed) {
+            self.camera.on_keyboard_input(CameraMovement::Left, delta_time);
+        }
+        if keys.contains_key(&Key::D) && (keys.get(&Key::D).unwrap() == &KeyState::Pressed) {
+            self.camera.on_keyboard_input(CameraMovement::Right, delta_time);
+        }
+        if keys.contains_key(&Key::Up) && (keys.get(&Key::Up).unwrap() == &KeyState::Pressed) {
+            self.camera.on_keyboard_input(CameraMovement::Up, delta_time);
+        }
+        if keys.contains_key(&Key::Down) && (keys.get(&Key::Down).unwrap() == &KeyState::Pressed) {
+            self.camera.on_keyboard_input(CameraMovement::Down, delta_time);
+        }
+        Ok(())
     }
 
     pub fn on_keyboard_input(
@@ -54,7 +77,6 @@ impl Scene {
         _device_id: DeviceId,
         event: KeyEvent,
         _is_synthetic: bool,
-        delta_time: f64,
     ) -> Result<(), ErrorCode> {
         // Handle camera input
         if let KeyEvent {
@@ -64,24 +86,7 @@ impl Scene {
         } = event
         {
             match key_code {
-                KeyCode::KeyW => self
-                    .camera
-                    .on_keyboard_input(CameraMovement::Forward, delta_time),
-                KeyCode::KeyS => self
-                    .camera
-                    .on_keyboard_input(CameraMovement::Backward, delta_time),
-                KeyCode::KeyA => self
-                    .camera
-                    .on_keyboard_input(CameraMovement::Left, delta_time),
-                KeyCode::KeyD => self
-                    .camera
-                    .on_keyboard_input(CameraMovement::Right, delta_time),
-                KeyCode::ArrowUp => self
-                    .camera
-                    .on_keyboard_input(CameraMovement::Up, delta_time),
-                KeyCode::ArrowDown => self
-                    .camera
-                    .on_keyboard_input(CameraMovement::Down, delta_time),
+                KeyCode::KeyM => self.camera.switch_mode(),
                 _ => (),
             }
         }
@@ -90,18 +95,16 @@ impl Scene {
 
     pub fn on_mouse_moved(
         &mut self,
-        _device_id: DeviceId,
+        old_position: Option<LogicalPosition<f64>>,
         new_position: LogicalPosition<f64>,
         _delta_time: f64,
     ) -> Result<(), ErrorCode> {
-        if let Some(old_position) = self.mouse_position {
+        if let Some(old_position) = old_position {
             let x_offset = (new_position.x - old_position.x) as f32;
             let y_offset = (new_position.y - old_position.y) as f32;
             let should_constrain_pitch = true;
             self.camera.on_mouse_moved(x_offset, y_offset, should_constrain_pitch);
         }
-        self.mouse_position = Some(new_position);
-        
         Ok(())
     }
 }

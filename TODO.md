@@ -3,7 +3,6 @@
 ## To fix
 
 - Validation error: Immediate submit buffer destruction (maybe ImGui error ?)
-- Keyboard input (sticky)
 
 ## To add
 

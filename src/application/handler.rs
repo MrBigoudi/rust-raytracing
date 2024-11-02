@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use log::warn;
 use winit::{
     application::ApplicationHandler,
@@ -34,9 +32,9 @@ impl ApplicationHandler for Application<'_> {
     }
 
     fn new_events(&mut self, _event_loop: &ActiveEventLoop, _cause: StartCause) {
-        let now = Instant::now();
-        self.delta_time = now - self.last_frame;
-        self.last_frame = now;
+        if let Err(err) = self.update(){
+            panic!("Failed to update the application: {:?}", err);
+        }
 
         // Handle event for the gui
         if self.vulkan_context.is_some() {

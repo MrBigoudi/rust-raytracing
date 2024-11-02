@@ -1,10 +1,12 @@
 use log::{debug, error, warn};
 use winit::{
     dpi::{LogicalPosition, PhysicalSize},
-    event::{DeviceId, KeyEvent},
+    event::{DeviceId, KeyEvent}, keyboard::PhysicalKey,
 };
 
 use crate::application::{core::error::ErrorCode, Application};
+
+use super::key_map::{Key, KeyState};
 
 impl Application<'_> {
     pub fn on_exit(&mut self) -> Result<(), ErrorCode> {
@@ -83,9 +85,19 @@ impl Application<'_> {
         event: KeyEvent,
         is_synthetic: bool,
     ) -> Result<(), ErrorCode> {
-        let delta_time = self.delta_time.as_secs_f64();
+        if let KeyEvent {
+            physical_key: PhysicalKey::Code(key_code),
+            state,
+            ..
+        } = event
+        {
+            if let Some(key) = Key::from_winit(key_code){
+                let _ = self.keys.insert(key, KeyState::from_winit(state));
+            }
+        }
+        
         if let Some(scene) = &mut self.scene {
-            if let Err(err) = scene.on_keyboard_input(device_id, event, is_synthetic, delta_time) {
+            if let Err(err) = scene.on_keyboard_input(device_id, event, is_synthetic) {
                 error!(
                     "Failed to handle keyboard input event in the scene: {:?}",
                     err
@@ -100,12 +112,12 @@ impl Application<'_> {
 
     pub fn on_mouse_moved(
         &mut self,
-        device_id: DeviceId,
+        _device_id: DeviceId,
         new_position: LogicalPosition<f64>,
     ) -> Result<(), ErrorCode> {
         let delta_time = self.delta_time.as_secs_f64();
         if let Some(scene) = &mut self.scene {
-            if let Err(err) = scene.on_mouse_moved(device_id, new_position, delta_time) {
+            if let Err(err) = scene.on_mouse_moved(self.mouse_position, new_position, delta_time) {
                 error!(
                     "Failed to handle mouse moved event in the scene: {:?}",
                     err
@@ -115,6 +127,7 @@ impl Application<'_> {
         } else {
             warn!("The vulkan scene is not initialized correctly...");
         }
+        self.mouse_position = Some(new_position);
         Ok(())
     }
 }

@@ -20,6 +20,12 @@ pub enum CameraMovement {
     Down,
 }
 
+#[derive(PartialEq, Eq, Debug)]
+pub enum CameraMode {
+    Fixed,
+    Dynamic,
+}
+
 #[derive(Debug)]
 pub struct Camera {
     // camera Attributes
@@ -42,6 +48,7 @@ pub struct Camera {
     pub pitch: f32,
 
     pub is_accelerating: bool,
+    pub moving_mode: CameraMode,
 }
 
 impl Camera {
@@ -67,11 +74,19 @@ impl Camera {
             yaw: -90.,
             pitch: 0.,
             is_accelerating: false,
+            moving_mode: CameraMode::Dynamic,
         };
 
         camera.update_vectors();
 
         camera
+    }
+
+    pub fn switch_mode(&mut self) {
+        match self.moving_mode {
+            CameraMode::Fixed => self.moving_mode = CameraMode::Dynamic,
+            CameraMode::Dynamic => self.moving_mode = CameraMode::Fixed,
+        }
     }
 
     fn update_vectors(&mut self) {
@@ -121,6 +136,9 @@ impl Camera {
     }
 
     pub fn on_mouse_moved(&mut self, x_offset: f32, y_offset: f32, should_constrain_pitch: bool) {
+        if self.moving_mode == CameraMode::Fixed {
+            return
+        }
         let x_offset = x_offset * self.mouse_sensitivity;
         let y_offset = y_offset * self.mouse_sensitivity;
         self.yaw -= x_offset;
