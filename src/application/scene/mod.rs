@@ -5,8 +5,7 @@ use material::Material;
 use model::Model;
 use triangle::Triangle;
 use winit::{
-    event::{DeviceId, ElementState, KeyEvent},
-    keyboard::{KeyCode, PhysicalKey},
+    dpi::LogicalPosition, event::{DeviceId, ElementState, KeyEvent}, keyboard::{KeyCode, PhysicalKey}
 };
 
 use super::{core::error::ErrorCode, vulkan::types::VulkanContext};
@@ -21,6 +20,7 @@ pub struct Scene {
     pub models: Vec<Model>,
     pub materials: Vec<Material>,
     pub camera: Camera,
+    pub mouse_position: Option<LogicalPosition<f64>>,
 }
 
 impl Scene {
@@ -34,7 +34,6 @@ impl Scene {
             aspect_ratio,
             50.,
             0.1,
-            100.,
             Vec3::new(0., 1., 0.),
         );
 
@@ -46,6 +45,7 @@ impl Scene {
             models,
             materials,
             camera,
+            mouse_position: None
         })
     }
 
@@ -85,6 +85,23 @@ impl Scene {
                 _ => (),
             }
         }
+        Ok(())
+    }
+
+    pub fn on_mouse_moved(
+        &mut self,
+        _device_id: DeviceId,
+        new_position: LogicalPosition<f64>,
+        _delta_time: f64,
+    ) -> Result<(), ErrorCode> {
+        if let Some(old_position) = self.mouse_position {
+            let x_offset = (new_position.x - old_position.x) as f32;
+            let y_offset = (new_position.y - old_position.y) as f32;
+            let should_constrain_pitch = true;
+            self.camera.on_mouse_moved(x_offset, y_offset, should_constrain_pitch);
+        }
+        self.mouse_position = Some(new_position);
+        
         Ok(())
     }
 }

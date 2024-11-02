@@ -1,6 +1,6 @@
 use log::{debug, error, warn};
 use winit::{
-    dpi::PhysicalSize,
+    dpi::{LogicalPosition, PhysicalSize},
     event::{DeviceId, KeyEvent},
 };
 
@@ -88,6 +88,26 @@ impl Application<'_> {
             if let Err(err) = scene.on_keyboard_input(device_id, event, is_synthetic, delta_time) {
                 error!(
                     "Failed to handle keyboard input event in the scene: {:?}",
+                    err
+                );
+                return Err(ErrorCode::Unknown);
+            }
+        } else {
+            warn!("The vulkan scene is not initialized correctly...");
+        }
+        Ok(())
+    }
+
+    pub fn on_mouse_moved(
+        &mut self,
+        device_id: DeviceId,
+        new_position: LogicalPosition<f64>,
+    ) -> Result<(), ErrorCode> {
+        let delta_time = self.delta_time.as_secs_f64();
+        if let Some(scene) = &mut self.scene {
+            if let Err(err) = scene.on_mouse_moved(device_id, new_position, delta_time) {
+                error!(
+                    "Failed to handle mouse moved event in the scene: {:?}",
                     err
                 );
                 return Err(ErrorCode::Unknown);

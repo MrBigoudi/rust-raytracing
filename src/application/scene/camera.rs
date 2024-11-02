@@ -4,10 +4,7 @@ use glam::{Mat4, Vec3, Vec4};
 #[derive(Debug)]
 #[repr(C)]
 pub struct CameraGPU {
-    pub view_matrix: Mat4,
-    pub projection_matrix: Mat4,
     pub view_matrix_inverse: Mat4,
-    pub projection_matrix_inverse: Mat4,
     pub position: Vec4,
     pub plane_width: f32,
     pub plane_height: f32,
@@ -36,7 +33,6 @@ pub struct Camera {
     pub fov: f32,
     pub aspect_ratio: f32,
     pub near: f32,
-    pub far: f32,
 
     pub movement_acceleration: f32,
     pub movement_speed: f32,
@@ -54,7 +50,6 @@ impl Camera {
         aspect_ratio: f32,
         fov: f32,
         near: f32,
-        far: f32,
         world_up: Vec3,
     ) -> Self {
         let mut camera = Camera {
@@ -66,7 +61,6 @@ impl Camera {
             fov,
             aspect_ratio,
             near,
-            far,
             movement_acceleration: 5.,
             movement_speed: 20.,
             mouse_sensitivity: 0.1,
@@ -102,22 +96,6 @@ impl Camera {
         // }
     }
 
-    fn get_perspective(&self) -> Mat4 {
-        Mat4::perspective_rh(
-            self.fov.to_radians(),
-            self.aspect_ratio,
-            self.near,
-            self.far,
-        )
-        .transpose()
-        // Mat4{
-        //     x_axis: Vec4::new(1.358, 0., 0., 0.),
-        //     y_axis: Vec4::new(0., 2.414, 0., 0.),
-        //     z_axis: Vec4::new(0., 0., -1.001, -0.2),
-        //     w_axis: Vec4::new(0., 0., -1., 0.),
-        // }
-    }
-
     fn get_plane_height(&self) -> f32 {
         2. * self.near * (0.5 * self.fov.to_radians()).tan()
     }
@@ -142,13 +120,13 @@ impl Camera {
         };
     }
 
-    pub fn on_mouse_input(&mut self, x_offset: f32, y_offset: f32, constrain_pitch: bool) {
+    pub fn on_mouse_moved(&mut self, x_offset: f32, y_offset: f32, should_constrain_pitch: bool) {
         let x_offset = x_offset * self.mouse_sensitivity;
         let y_offset = y_offset * self.mouse_sensitivity;
-        self.yaw += x_offset;
+        self.yaw -= x_offset;
         self.pitch += y_offset;
         // make sure that when pitch is out of bounds, screen doesn't get flipped
-        if constrain_pitch {
+        if should_constrain_pitch {
             self.pitch = self.pitch.clamp(-89.0, 89.0);
         }
         // update Front, Right and Up Vectors using the updated Euler angles
@@ -161,18 +139,13 @@ impl Camera {
 
     pub fn get_gpu_data(&self) -> CameraGPU {
         let view_matrix = self.get_view();
-        let projection_matrix = self.get_perspective();
         let plane_height = self.get_plane_height();
         let plane_width = self.get_plane_width(plane_height);
         let view_matrix_inverse = Mat4::inverse(&Mat4::transpose(&view_matrix));
-        let projection_matrix_inverse = Mat4::inverse(&Mat4::transpose(&projection_matrix));
         let position = Vec4::new(self.eye.x, self.eye.y, self.eye.z, 1.);
 
         CameraGPU {
-            view_matrix,
-            projection_matrix,
             view_matrix_inverse,
-            projection_matrix_inverse,
             position,
             plane_width,
             plane_height,

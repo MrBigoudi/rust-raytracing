@@ -100,6 +100,19 @@ impl ApplicationHandler for Application<'_> {
                     panic!("Failed to handle keyboard input event: {:?}", err);
                 }
             }
+            WindowEvent::CursorMoved { 
+                position,
+                device_id,
+            } => {
+                if let Some(window) = &self.window {
+                    let new_position = position.to_logical(window.scale_factor());
+                    if let Err(err) = self.on_mouse_moved(device_id, new_position) {
+                        panic!("Failed to handle mouse moved event: {:?}", err);
+                    }
+                } else {
+                    warn!("The window is not initialized correctly...");
+                }
+            }
             _ => (),
         }
     }
