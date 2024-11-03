@@ -34,6 +34,12 @@ static const int DESCRIPTOR_BINDING_CAMERA_UBO = 0;
 [[vk::binding(DESCRIPTOR_BINDING_CAMERA_UBO, DESCRIPTOR_SET_CAMERA_UBO)]]
 ConstantBuffer<Camera> _Camera;
 
+//////////// PUSH CONSTANTS
+[[vk::push_constant]]
+cbuffer _PushConstants {
+    uint nb_triangles;
+}
+
 
 //////////// DISPATCH COMPUTE
 static const int THREAD_GROUP_SIZE_X = 32;
@@ -62,7 +68,6 @@ void main(uint3 thread_id : SV_DispatchThreadID) {
     // No bvh
     Hit closest_hit;
     closest_hit.did_hit = 0;
-    uint nb_triangles = 1;
     get_closest_hit(ray, nb_triangles, closest_hit, _Triangles, _Models);
 
     float4 color = float4(0.f, 0.f, 0.f, 1.f);

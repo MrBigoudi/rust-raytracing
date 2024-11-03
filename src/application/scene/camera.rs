@@ -52,13 +52,7 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(
-        position: Vec3,
-        aspect_ratio: f32,
-        fov: f32,
-        near: f32,
-        world_up: Vec3,
-    ) -> Self {
+    pub fn new(position: Vec3, aspect_ratio: f32, fov: f32, near: f32, world_up: Vec3) -> Self {
         let mut camera = Camera {
             eye: position,
             at: Vec3::ZERO,
@@ -137,7 +131,7 @@ impl Camera {
 
     pub fn on_mouse_moved(&mut self, x_offset: f32, y_offset: f32, should_constrain_pitch: bool) {
         if self.moving_mode == CameraMode::Fixed {
-            return
+            return;
         }
         let x_offset = x_offset * self.mouse_sensitivity;
         let y_offset = y_offset * self.mouse_sensitivity;

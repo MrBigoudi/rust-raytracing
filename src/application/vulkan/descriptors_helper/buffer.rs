@@ -8,7 +8,6 @@ use vk_mem::{
 
 use crate::application::{core::error::ErrorCode, vulkan::types::VulkanContext};
 
-
 pub struct AllocatedBuffer {
     pub buffer: Buffer,
     pub allocation: Allocation,
@@ -64,11 +63,11 @@ impl AllocatedBuffer {
 
 impl VulkanContext<'_> {
     pub fn update_buffer<T>(
-        &self, 
+        &self,
         dst_buffer: &AllocatedBuffer,
         data: &[T],
         offset: u64,
-    )-> Result<(), ErrorCode> {
+    ) -> Result<(), ErrorCode> {
         // Run a GPU side command to perform the copy using the immediate submit
         if let Err(err) = self.immediate_submit(&|vulkan_context, cmd| {
             unsafe {

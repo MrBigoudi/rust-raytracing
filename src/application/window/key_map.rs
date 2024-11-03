@@ -1,6 +1,9 @@
 use log::warn;
 // use log::warn;
-use winit::{event::ElementState, keyboard::{KeyCode, SmolStr}};
+use winit::{
+    event::ElementState,
+    keyboard::{KeyCode, SmolStr},
+};
 
 pub fn winit_character_to_imgui_key(key: SmolStr) -> Option<imgui::Key> {
     if key == "A" {
@@ -86,19 +89,14 @@ pub fn winit_character_to_imgui_key(key: SmolStr) -> Option<imgui::Key> {
     }
 }
 
-#[derive(PartialEq, Eq)]
-pub enum KeyState{
+#[derive(PartialEq, Eq, Default)]
+pub enum KeyState {
     Pressed,
+    #[default]
     Released,
 }
 
-impl Default for KeyState{
-    fn default() -> Self {
-        KeyState::Released
-    }
-}
-
-impl KeyState{
+impl KeyState {
     pub fn from_winit(state: ElementState) -> Self {
         match state {
             ElementState::Pressed => Self::Pressed,
@@ -108,13 +106,40 @@ impl KeyState{
 }
 
 #[derive(PartialEq, Eq, Hash)]
-pub enum Key{
-    A,B,C,D,E,F,G,H,I,
-    J,K,L,M,N,O,P,Q,R,
-    S,T,U,V,W,X,Y,Z,
-    Left, Right,
-    Up, Down,
-    Enter, Delete, Escape,
+pub enum Key {
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
+    Left,
+    Right,
+    Up,
+    Down,
+    Enter,
+    Delete,
+    Escape,
 }
 
 impl Key {
@@ -154,9 +179,9 @@ impl Key {
             KeyCode::Delete => Some(Key::Delete),
             KeyCode::Escape => Some(Key::Escape),
             _ => {
-                warn!{"Winit Key: {:?} is not yet supported...", key_code};
+                warn! {"Winit Key: {:?} is not yet supported...", key_code};
                 None
-            },
+            }
         }
     }
 }

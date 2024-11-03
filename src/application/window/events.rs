@@ -1,7 +1,8 @@
 use log::{debug, error, warn};
 use winit::{
     dpi::{LogicalPosition, PhysicalSize},
-    event::{DeviceId, KeyEvent}, keyboard::PhysicalKey,
+    event::{DeviceId, KeyEvent},
+    keyboard::PhysicalKey,
 };
 
 use crate::application::{core::error::ErrorCode, Application};
@@ -91,11 +92,11 @@ impl Application<'_> {
             ..
         } = event
         {
-            if let Some(key) = Key::from_winit(key_code){
+            if let Some(key) = Key::from_winit(key_code) {
                 let _ = self.keys.insert(key, KeyState::from_winit(state));
             }
         }
-        
+
         if let Some(scene) = &mut self.scene {
             if let Err(err) = scene.on_keyboard_input(device_id, event, is_synthetic) {
                 error!(
@@ -118,10 +119,7 @@ impl Application<'_> {
         let delta_time = self.delta_time.as_secs_f64();
         if let Some(scene) = &mut self.scene {
             if let Err(err) = scene.on_mouse_moved(self.mouse_position, new_position, delta_time) {
-                error!(
-                    "Failed to handle mouse moved event in the scene: {:?}",
-                    err
-                );
+                error!("Failed to handle mouse moved event in the scene: {:?}", err);
                 return Err(ErrorCode::Unknown);
             }
         } else {

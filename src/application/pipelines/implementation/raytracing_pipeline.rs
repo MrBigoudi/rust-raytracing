@@ -1,13 +1,16 @@
 use ash::vk::{
-    BufferUsageFlags, DescriptorBufferInfo, DescriptorImageInfo, DescriptorSet, DescriptorSetLayoutCreateFlags, DescriptorType, ImageLayout, Pipeline, PipelineBindPoint, PipelineLayout, ShaderStageFlags, WriteDescriptorSet, WHOLE_SIZE
+    BufferUsageFlags, DescriptorBufferInfo, DescriptorImageInfo, DescriptorSet,
+    DescriptorSetLayoutCreateFlags, DescriptorType, ImageLayout, Pipeline, PipelineBindPoint,
+    PipelineLayout, PushConstantRange, ShaderStageFlags, WriteDescriptorSet, WHOLE_SIZE,
 };
-use log::{error, warn};
+use log::error;
 
 use crate::application::{
     core::error::ErrorCode,
     pipelines::{
         compute_pipeline::{ComputePipeline, PipelineAttributes},
         descriptor::Descriptor,
+        push_constant::PushConstant,
     },
     scene::Scene,
     vulkan::{
@@ -31,11 +34,22 @@ pub struct RaytracingBuffers {
     pub camera_ubo: AllocatedBuffer,
 }
 
+#[derive(Default)]
+#[repr(C)]
+pub struct RaytracingPushConstant {
+    pub nb_triangles: usize,
+}
+
 impl RaytracingPipeline {
-    pub fn update_camera_buffer(&mut self, vulkan_context: &VulkanContext, scene: &Scene) -> Result<(), ErrorCode> {
+    pub fn update_camera_buffer(
+        &mut self,
+        vulkan_context: &VulkanContext,
+        scene: &Scene,
+    ) -> Result<(), ErrorCode> {
         let dst_offset = 0;
         let data = [scene.camera.get_gpu_data()];
-        if let Err(err) = vulkan_context.update_buffer(&self.buffers.camera_ubo, &data, dst_offset){
+        if let Err(err) = vulkan_context.update_buffer(&self.buffers.camera_ubo, &data, dst_offset)
+        {
             error!("Failed to update a vulkan buffer: {:?}", err);
             return Err(ErrorCode::VulkanFailure);
         }
@@ -342,14 +356,22 @@ impl ComputePipeline for RaytracingPipeline {
         _vulkan_context: &VulkanContext,
         _scene: &Scene,
     ) -> Result<(), ErrorCode> {
-        warn!("There are no push constants set up for the raytracing pipeline...");
+        let range = PushConstantRange::default()
+            .offset(0)
+            .size(size_of::<RaytracingPushConstant>() as u32)
+            .stage_flags(ShaderStageFlags::COMPUTE);
+        let push_constant = PushConstant { range };
+        self.base.push_constants = Some(push_constant);
         Ok(())
     }
 
     fn run(&mut self, vulkan_context: &VulkanContext, scene: &Scene) -> Result<(), ErrorCode> {
         // Update camera
-        if let Err(err) = self.update_camera_buffer(vulkan_context, scene){
-            error!("Failed to update the camera UBO in the raytracing pipeline: {:?}", err);
+        if let Err(err) = self.update_camera_buffer(vulkan_context, scene) {
+            error!(
+                "Failed to update the camera UBO in the raytracing pipeline: {:?}",
+                err
+            );
             return Err(ErrorCode::Unknown);
         };
 
@@ -366,7 +388,12 @@ impl ComputePipeline for RaytracingPipeline {
         };
 
         // Bind the descriptor sets
-        let descriptor_sets = self.base.descriptors.iter().map(|d| d.set).collect::<Vec<DescriptorSet>>();
+        let descriptor_sets = self
+            .base
+            .descriptors
+            .iter()
+            .map(|d| d.set)
+            .collect::<Vec<DescriptorSet>>();
         unsafe {
             device.cmd_bind_descriptor_sets(
                 command_buffer,
@@ -379,6 +406,18 @@ impl ComputePipeline for RaytracingPipeline {
         };
 
         // TODO: add push constants if needed
+        let push_constant = RaytracingPushConstant {
+            nb_triangles: scene.triangles.len(),
+        };
+        unsafe {
+            device.cmd_push_constants(
+                command_buffer,
+                self.base.pipeline_layout,
+                ShaderStageFlags::COMPUTE,
+                0,
+                PushConstant::data_to_u8_slice(&push_constant),
+            );
+        }
 
         // Execute the compute pipeline dispatch
         // We are using 32x32 workgroup size so we need to divide the drawing size by 32

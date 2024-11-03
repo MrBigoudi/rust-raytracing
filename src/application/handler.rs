@@ -32,7 +32,7 @@ impl ApplicationHandler for Application<'_> {
     }
 
     fn new_events(&mut self, _event_loop: &ActiveEventLoop, _cause: StartCause) {
-        if let Err(err) = self.update(){
+        if let Err(err) = self.update() {
             panic!("Failed to update the application: {:?}", err);
         }
 
@@ -98,7 +98,7 @@ impl ApplicationHandler for Application<'_> {
                     panic!("Failed to handle keyboard input event: {:?}", err);
                 }
             }
-            WindowEvent::CursorMoved { 
+            WindowEvent::CursorMoved {
                 position,
                 device_id,
             } => {

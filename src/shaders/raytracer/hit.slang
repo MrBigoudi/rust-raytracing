@@ -85,5 +85,5 @@ public void get_closest_hit(Ray ray, uint nb_triangles, inout Hit closest_hit, R
 public void get_color(Hit hit, inout float4 color, RWStructuredBuffer<Triangle> triangles, RWStructuredBuffer<Model> models, RWStructuredBuffer<Material> materials){
     if(hit.did_hit == 0) return;
     Triangle hit_triangle = triangles[hit.triangle_index];
-    color += materials[models[hit_triangle.model_index].material_index].albedo;
+    color += materials[models[hit_triangle.model_index].material_index].ambient;
 }

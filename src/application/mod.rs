@@ -1,14 +1,22 @@
 use core::error::ErrorCode;
-use std::{collections::HashMap, time::{Duration, Instant}};
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 
 use log::{debug, error, warn};
 use parameters::ApplicationParameters;
 use pipelines::Pipelines;
 use scene::Scene;
 use vulkan::types::VulkanContext;
-use window::{init::WindowContext, key_map::{Key, KeyState}};
+use window::{
+    init::WindowContext,
+    key_map::{Key, KeyState},
+};
 use winit::{
-    dpi::LogicalPosition, event_loop::{ActiveEventLoop, ControlFlow, EventLoop}, window::Window
+    dpi::LogicalPosition,
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+    window::Window,
 };
 
 mod core;
@@ -117,7 +125,7 @@ impl Application<'_> {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), ErrorCode>{
+    fn update(&mut self) -> Result<(), ErrorCode> {
         // Update delta time
         let now = Instant::now();
         self.delta_time = now - self.last_frame;
@@ -125,8 +133,11 @@ impl Application<'_> {
 
         // Update the scene
         if let Some(ref mut scene) = &mut self.scene {
-            if let Err(err) = scene.update(self.delta_time.as_secs_f64(), &self.keys){
-                error!("Failed to update the scene when updating the application: {:?}", err);
+            if let Err(err) = scene.update(self.delta_time.as_secs_f64(), &self.keys) {
+                error!(
+                    "Failed to update the scene when updating the application: {:?}",
+                    err
+                );
                 return Err(ErrorCode::Unknown);
             }
         } else {

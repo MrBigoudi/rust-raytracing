@@ -1,5 +1,5 @@
 implementing scene;
 
 public struct Material {
-    public float4 albedo;
+    public float4 ambient;
 }
