@@ -37,7 +37,8 @@ ConstantBuffer<Camera> _Camera;
 //////////// PUSH CONSTANTS
 [[vk::push_constant]]
 cbuffer _PushConstants {
-    uint nb_triangles;
+    uint _NbTriangles;
+    uint _IsWireframeOn;
 }
 
 
@@ -68,10 +69,10 @@ void main(uint3 thread_id : SV_DispatchThreadID) {
     // No bvh
     Hit closest_hit;
     closest_hit.did_hit = 0;
-    get_closest_hit(ray, nb_triangles, closest_hit, _Triangles, _Models);
+    get_closest_hit(ray, _NbTriangles, closest_hit, _Triangles, _Models);
 
     float4 color = float4(0.f, 0.f, 0.f, 1.f);
-    get_color(closest_hit, color, _Triangles, _Models, _Materials);
+    get_color(closest_hit, color, _Triangles, _Models, _Materials, (_IsWireframeOn != 0));
 
     _Framebuffer[texel_coord] = color;
 }

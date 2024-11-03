@@ -123,7 +123,7 @@ impl VulkanContext<'_> {
         swapchain_next_index: usize,
         pipelines: &mut Pipelines,
         window: &Window,
-        scene: &Scene,
+        scene: &mut Scene,
     ) -> Result<(), ErrorCode> {
         // Vulkan handles are just a 64 bit handle/pointer, so its fine to copy them around
         // But remember that their actual data is handled by vulkan itself
@@ -222,7 +222,7 @@ impl VulkanContext<'_> {
         )?;
 
         {
-            if let Err(err) = self.draw_gui(window, swapchain_next_index) {
+            if let Err(err) = self.draw_gui(window, swapchain_next_index, scene) {
                 error!("Failed to render the gui: {:?}", err);
                 return Err(ErrorCode::Unknown);
             }
@@ -339,7 +339,7 @@ impl VulkanContext<'_> {
         &mut self,
         pipelines: &mut Pipelines,
         window: &Window,
-        scene: &Scene,
+        scene: &mut Scene,
     ) -> Result<(), ErrorCode> {
         let timeout_in_ns: u64 = 1_000_000_000;
         if let Err(err) = self.wait_render_fence(timeout_in_ns) {

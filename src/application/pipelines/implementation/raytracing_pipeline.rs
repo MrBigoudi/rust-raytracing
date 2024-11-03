@@ -37,7 +37,8 @@ pub struct RaytracingBuffers {
 #[derive(Default)]
 #[repr(C)]
 pub struct RaytracingPushConstant {
-    pub nb_triangles: usize,
+    pub nb_triangles: u32,
+    pub is_wireframe_on: u32,
 }
 
 impl RaytracingPipeline {
@@ -407,7 +408,8 @@ impl ComputePipeline for RaytracingPipeline {
 
         // TODO: add push constants if needed
         let push_constant = RaytracingPushConstant {
-            nb_triangles: scene.triangles.len(),
+            nb_triangles: scene.triangles.len() as u32,
+            is_wireframe_on: scene.is_wireframe_on as u32,
         };
         unsafe {
             device.cmd_push_constants(

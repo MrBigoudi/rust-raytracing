@@ -60,7 +60,7 @@ impl Application<'_> {
         if let Some(vulkan_context) = &mut self.vulkan_context {
             if let Some(pipelines) = &mut self.pipelines {
                 if let Some(window) = &self.window {
-                    if let Some(scene) = &self.scene {
+                    if let Some(scene) = &mut self.scene {
                         if let Err(err) = vulkan_context.draw(pipelines, window, scene) {
                             error!("The vulkan context failed to draw stuff: {:?}", err);
                             return Err(ErrorCode::VulkanFailure);

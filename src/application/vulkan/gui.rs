@@ -14,7 +14,7 @@ use winit::{
     window::Window,
 };
 
-use crate::application::{core::error::ErrorCode, window::key_map::winit_character_to_imgui_key};
+use crate::application::{core::error::ErrorCode, scene::Scene, window::key_map::winit_character_to_imgui_key};
 
 use super::{setup::frame_data::FRAME_OVERLAP, types::VulkanContext};
 
@@ -193,6 +193,7 @@ impl VulkanContext<'_> {
         &mut self,
         window: &Window,
         swapchain_next_index: usize,
+        scene: &mut Scene,
     ) -> Result<(), ErrorCode> {
         self.prepare_gui_draw_cmd(swapchain_next_index)?;
 
@@ -210,15 +211,10 @@ impl VulkanContext<'_> {
         let ui = self.gui.context.as_mut().unwrap().frame();
 
         // TODO: Create the GUI window
-        ui.window("Hello world")
+        ui.window("Raytracing Parameters")
             .size([300.0, 110.0], imgui::Condition::FirstUseEver)
             .build(|| {
-                ui.text_wrapped("Hello world!");
-                let mouse_pos = ui.io().mouse_pos;
-                ui.text(format!(
-                    "Mouse Position: ({:.1},{:.1})",
-                    mouse_pos[0], mouse_pos[1]
-                ))
+                ui.checkbox("Toogl wireframe mode", &mut scene.is_wireframe_on);
             });
 
         self.gui

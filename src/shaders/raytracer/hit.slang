@@ -82,8 +82,27 @@ public void get_closest_hit(Ray ray, uint nb_triangles, inout Hit closest_hit, R
     }
 }
 
-public void get_color(Hit hit, inout float4 color, RWStructuredBuffer<Triangle> triangles, RWStructuredBuffer<Model> models, RWStructuredBuffer<Material> materials){
+public void get_color(
+    Hit hit, 
+    inout float4 color, 
+    RWStructuredBuffer<Triangle> triangles, 
+    RWStructuredBuffer<Model> models, 
+    RWStructuredBuffer<Material> materials,
+    bool is_wireframe_on,
+    ){
     if(hit.did_hit == 0) return;
     Triangle hit_triangle = triangles[hit.triangle_index];
     color += materials[models[hit_triangle.model_index].material_index].ambient;
+
+    // Wireframe color
+    if (is_wireframe_on) {
+        // Check distance to edges
+        float wireframe_edges_width = 0.02;
+        float4 wireframe_edges_color = float4(0.f, 0.f, 0.f, 1.f);
+            if (hit.coords.x < wireframe_edges_width
+            || hit.coords.y < wireframe_edges_width
+            || hit.coords.z < wireframe_edges_width) {
+            color = wireframe_edges_color;
+        }
+    }
 }

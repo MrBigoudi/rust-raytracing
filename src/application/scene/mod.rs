@@ -29,6 +29,7 @@ pub struct Scene {
     pub models: Vec<Model>,
     pub materials: Vec<Material>,
     pub camera: Camera,
+    pub is_wireframe_on: bool,
 }
 
 impl Scene {
@@ -66,6 +67,7 @@ impl Scene {
             models,
             materials,
             camera,
+            is_wireframe_on: false,
         })
     }
 

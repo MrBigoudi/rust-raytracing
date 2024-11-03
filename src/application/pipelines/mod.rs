@@ -11,7 +11,6 @@ pub mod push_constant;
 pub mod shader;
 
 pub struct Pipelines {
-    // TODO: use the correct pipeline
     // pub test_pipeline: TestPipeline,
     pub raytracing_pipeline: RaytracingPipeline,
 }
