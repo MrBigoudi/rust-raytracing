@@ -3,7 +3,7 @@ use ash::vk::{
     DescriptorSetLayoutCreateFlags, DescriptorType, ImageLayout, Pipeline, PipelineBindPoint,
     PipelineLayout, PushConstantRange, ShaderStageFlags, WriteDescriptorSet, WHOLE_SIZE,
 };
-use log::error;
+use log::{error, info};
 
 use crate::application::{
     core::error::ErrorCode,
@@ -12,7 +12,7 @@ use crate::application::{
         descriptor::Descriptor,
         push_constant::PushConstant,
     },
-    scene::Scene,
+    scene::{bvh::BvhType, Scene},
     vulkan::{
         descriptors_helper::{
             allocator::DescriptorPoolSizeRatio, buffer::AllocatedBuffer,
@@ -31,6 +31,7 @@ pub struct RaytracingBuffers {
     pub triangles_ssbo: AllocatedBuffer,
     pub models_ssbo: AllocatedBuffer,
     pub materials_ssbo: AllocatedBuffer,
+    pub bvhs_ssbo: Option<AllocatedBuffer>,
     pub camera_ubo: AllocatedBuffer,
 }
 
@@ -39,6 +40,7 @@ pub struct RaytracingBuffers {
 pub struct RaytracingPushConstant {
     pub nb_triangles: u32,
     pub is_wireframe_on: u32,
+    pub bvh_type: u32,
 }
 
 impl RaytracingPipeline {
@@ -51,9 +53,95 @@ impl RaytracingPipeline {
         let data = [scene.camera.get_gpu_data()];
         if let Err(err) = vulkan_context.update_buffer(&self.buffers.camera_ubo, &data, dst_offset)
         {
-            error!("Failed to update a vulkan buffer: {:?}", err);
+            error!(
+                "Failed to update the camera ubo in the raytracing pipeline: {:?}",
+                err
+            );
             return Err(ErrorCode::VulkanFailure);
         }
+        Ok(())
+    }
+
+    pub fn update_bvhs_buffer(
+        &mut self,
+        vulkan_context: &VulkanContext,
+        scene: &Scene,
+    ) -> Result<(), ErrorCode> {
+        // Clean old buffer
+        vulkan_context.device_wait_idle()?;
+        let allocator = &vulkan_context.get_allocator()?.allocator;
+        if let Some(bvh_ssbo) = self.buffers.bvhs_ssbo.as_mut() {
+            if let Err(err) = bvh_ssbo.clean(allocator) {
+                error!(
+                    "Failed to clean the bvhs buffer in the raytracing pipeline: {:?}",
+                    err
+                );
+                return Err(ErrorCode::CleaningFailure);
+            }
+        };
+
+        // Create new buffer
+        self.buffers.bvhs_ssbo = if scene.bvh_type == BvhType::None {
+            None
+        } else {
+            let data = match scene.get_bvh() {
+                Ok(bvh) => {
+                    if bvh.is_empty() {
+                        error!("Can't get the bvh from the scene in the raytracing pipeline, BVH tree is empty");
+                        return Err(ErrorCode::Unknown);
+                    } else {
+                        bvh.as_slice()
+                    }
+                }
+                Err(err) => {
+                    error!(
+                        "Failed to get the bvh from the scene in the raytracing pipeline: {:?}",
+                        err
+                    );
+                    return Err(ErrorCode::Unknown);
+                }
+            };
+            match vulkan_context.map_data_to_buffer(data, BufferUsageFlags::STORAGE_BUFFER) {
+                Ok(buffer) => Some(buffer),
+                Err(err) => {
+                    error!(
+                        "Failed to create the bvhs ssbo for the raytracing pipeline: {:?}",
+                        err
+                    );
+                    return Err(ErrorCode::InitializationFailure);
+                }
+            }
+        };
+
+        // Create new set
+        if scene.bvh_type != BvhType::None {
+            let descriptor_bvhs_info = [DescriptorBufferInfo::default()
+                .buffer(self.buffers.bvhs_ssbo.as_ref().unwrap().buffer)
+                .range(WHOLE_SIZE)
+                .offset(0)];
+
+            // Get the corresponding descriptor set (bvhs are on set 1)
+            let set = 1;
+            let descriptor_set = self.base.descriptors[set].set;
+
+            // Updates to perform
+            let writes_descriptor_set = [
+                // TODO: add other things
+                // BVHs
+                WriteDescriptorSet::default()
+                    .dst_set(descriptor_set)
+                    .dst_binding(0)
+                    .descriptor_count(1)
+                    .descriptor_type(DescriptorType::STORAGE_BUFFER)
+                    .buffer_info(&descriptor_bvhs_info),
+            ];
+
+            let device = vulkan_context.get_device()?;
+            vulkan_context.device_wait_idle()?;
+            unsafe { device.update_descriptor_sets(&writes_descriptor_set, &[]) };
+            info!("BVH descriptor set updated in the raytracing pipeline");
+        }
+
         Ok(())
     }
 
@@ -61,6 +149,7 @@ impl RaytracingPipeline {
         vulkan_context: &VulkanContext,
         scene: &Scene,
     ) -> Result<RaytracingBuffers, ErrorCode> {
+        // TODO: add other things
         let triangles_ssbo = match vulkan_context
             .map_data_to_buffer(scene.triangles.as_slice(), BufferUsageFlags::STORAGE_BUFFER)
         {
@@ -100,6 +189,31 @@ impl RaytracingPipeline {
             }
         };
 
+        let bvhs_ssbo = if scene.bvh_type == BvhType::None {
+            None
+        } else {
+            let data = match scene.get_bvh() {
+                Ok(bvh) => bvh,
+                Err(err) => {
+                    error!("Failed to get the bvh from the scene when initializing the bvhs ssbo in the raytracing pipeline: {:?}", err);
+                    return Err(ErrorCode::Unknown);
+                }
+            };
+            match vulkan_context.map_data_to_buffer(
+                data.as_slice(),
+                BufferUsageFlags::STORAGE_BUFFER,
+            ) {
+                Ok(buffer) => Some(buffer),
+                Err(err) => {
+                    error!(
+                        "Failed to create the bvhs ssbo for the raytracing pipeline: {:?}",
+                        err
+                    );
+                    return Err(ErrorCode::InitializationFailure);
+                }
+            }
+        };
+
         let camera_ubo = match vulkan_context.map_data_to_buffer(
             &[scene.camera.get_gpu_data()],
             BufferUsageFlags::UNIFORM_BUFFER,
@@ -118,6 +232,7 @@ impl RaytracingPipeline {
             triangles_ssbo,
             models_ssbo,
             materials_ssbo,
+            bvhs_ssbo,
             camera_ubo,
         })
     }
@@ -144,6 +259,15 @@ impl RaytracingPipeline {
                 err
             );
             return Err(ErrorCode::CleaningFailure);
+        }
+        if let Some(bvh_ssbo) = self.buffers.bvhs_ssbo.as_mut() {
+            if let Err(err) = bvh_ssbo.clean(allocator) {
+                error!(
+                    "Failed to clean the bvhs buffer in the raytracing pipeline: {:?}",
+                    err
+                );
+                return Err(ErrorCode::CleaningFailure);
+            }
         }
         if let Err(err) = self.buffers.camera_ubo.clean(allocator) {
             error!(
@@ -261,6 +385,63 @@ impl RaytracingPipeline {
     fn init_set_1(
         &mut self,
         vulkan_context: &VulkanContext,
+        scene: &Scene,
+    ) -> Result<Descriptor, ErrorCode> {
+        // Organize the set layout
+        let mut layout_builder = DescriptorLayoutBuilder::default();
+        // TODO: add other things
+        // BVHs
+        layout_builder.add_binding(0, DescriptorType::STORAGE_BUFFER)?;
+
+        // Build the layout
+        let device = vulkan_context.get_device()?;
+        let allocation_callback = vulkan_context.get_allocation_callback()?;
+        let descriptor_set_layout = layout_builder.build(
+            device,
+            allocation_callback,
+            ShaderStageFlags::COMPUTE,
+            DescriptorSetLayoutCreateFlags::empty(),
+        )?;
+
+        // Allocate the set
+        let descriptor_set = self
+            .base
+            .descriptor_allocator
+            .allocate(device, descriptor_set_layout)?;
+
+        // Send the data to the GPU
+        // TODO: add other things
+        // BVHs
+        if scene.bvh_type != BvhType::None {
+            let descriptor_bvhs_info = [DescriptorBufferInfo::default()
+                .buffer(self.buffers.bvhs_ssbo.as_ref().unwrap().buffer)
+                .range(WHOLE_SIZE)
+                .offset(0)];
+
+            // Updates to perform
+            let writes_descriptor_set = [
+                // TODO: add other things
+                // BVHs
+                WriteDescriptorSet::default()
+                    .dst_set(descriptor_set)
+                    .dst_binding(0)
+                    .descriptor_count(1)
+                    .descriptor_type(DescriptorType::STORAGE_BUFFER)
+                    .buffer_info(&descriptor_bvhs_info),
+            ];
+
+            unsafe { device.update_descriptor_sets(&writes_descriptor_set, &[]) };
+        }
+
+        Ok(Descriptor {
+            set: descriptor_set,
+            set_layout: descriptor_set_layout,
+        })
+    }
+
+    fn init_set_2(
+        &mut self,
+        vulkan_context: &VulkanContext,
         _scene: &Scene,
     ) -> Result<Descriptor, ErrorCode> {
         // Organize the set layout
@@ -349,6 +530,19 @@ impl ComputePipeline for RaytracingPipeline {
             }
         };
         self.base.descriptors.push(set_1);
+
+        // Set 2
+        let set_2 = match self.init_set_2(vulkan_context, scene) {
+            Ok(set) => set,
+            Err(err) => {
+                error!(
+                    "Failed to initialize the descriptor set 2 in the raytracing pipeline: {:?}",
+                    err
+                );
+                return Err(ErrorCode::InitializationFailure);
+            }
+        };
+        self.base.descriptors.push(set_2);
         Ok(())
     }
 
@@ -368,13 +562,7 @@ impl ComputePipeline for RaytracingPipeline {
 
     fn run(&mut self, vulkan_context: &VulkanContext, scene: &Scene) -> Result<(), ErrorCode> {
         // Update camera
-        if let Err(err) = self.update_camera_buffer(vulkan_context, scene) {
-            error!(
-                "Failed to update the camera UBO in the raytracing pipeline: {:?}",
-                err
-            );
-            return Err(ErrorCode::Unknown);
-        };
+        self.update_camera_buffer(vulkan_context, scene)?;
 
         let device = vulkan_context.get_device()?;
         let command_buffer = vulkan_context.get_current_frame()?.main_command_buffer;
@@ -410,6 +598,7 @@ impl ComputePipeline for RaytracingPipeline {
         let push_constant = RaytracingPushConstant {
             nb_triangles: scene.triangles.len() as u32,
             is_wireframe_on: scene.is_wireframe_on as u32,
+            bvh_type: scene.bvh_last_type as u32,
         };
         unsafe {
             device.cmd_push_constants(
@@ -464,6 +653,11 @@ impl ComputePipeline for RaytracingPipeline {
                 ratio: 1.0,
             },
             // Materials
+            DescriptorPoolSizeRatio {
+                descriptor_type: DescriptorType::STORAGE_BUFFER,
+                ratio: 1.0,
+            },
+            // BVHs
             DescriptorPoolSizeRatio {
                 descriptor_type: DescriptorType::STORAGE_BUFFER,
                 ratio: 1.0,

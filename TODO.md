@@ -6,7 +6,5 @@
 
 ## To add
 
-- Send BVH to GPU
-- Use BVH in GPU
-- Redesign raytracer descriptor sets
-- Display bvh
+- BVH raytracing GPU
+- Other BVH construction

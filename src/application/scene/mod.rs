@@ -37,8 +37,12 @@ pub struct Scene {
     pub materials: Vec<Material>,
     pub camera: Camera,
     pub is_wireframe_on: bool,
+
+    // Bvhs
     pub bvh_type: BvhType,
+    pub bvh_last_type: BvhType, // Cheecky way to check if an update happened
     pub bvhs: HashMap<BvhType, Vec<BvhNode>>,
+    pub bvhs_build_times: HashMap<BvhType, Duration>,
 }
 
 impl Scene {
@@ -71,8 +75,10 @@ impl Scene {
         }
 
         // panic!("nb tri: {:?}, nb mod: {:?}, nb mat: {:?}", triangles.len(), models.len(), materials.len());
+        let bvh_type = BvhType::None;
         let mut bvhs: HashMap<BvhType, Vec<BvhNode>> = Default::default();
-        let _ = bvhs.insert(BvhType::None, Vec::new());
+        let _ = bvhs.insert(bvh_type, Vec::new());
+        let bvhs_build_times: HashMap<BvhType, Duration> = Default::default();
 
         let mut scene = Scene {
             triangles,
@@ -80,26 +86,35 @@ impl Scene {
             materials,
             camera,
             is_wireframe_on: false,
-            bvh_type: BvhType::default(),
+            bvh_type,
+            bvh_last_type: bvh_type,
             bvhs,
+            bvhs_build_times,
         };
 
         // TODO: Init the bvhs
-        let time = match scene.init_bvh(BvhType::DefaultTopDown) {
-            Ok(time) => time,
-            Err(err) => {
-                error!("Failed to init a bvh: {:?}", err);
-                return Err(ErrorCode::Unknown);
-            }
-        };
-        info!(
-            "It took {:?}s to build the default top down bvh",
-            time.as_secs_f32()
-        );
-        info!(
-            "Top Down BVH:\n{}",
-            BvhNode::to_string(scene.bvhs.get(&BvhType::DefaultTopDown).unwrap())
-        );
+        let bvhs_to_build = [BvhType::DefaultTopDown];
+        for bvh_type in bvhs_to_build {
+            let time = match scene.init_bvh(bvh_type) {
+                Ok(time) => time,
+                Err(err) => {
+                    error!("Failed to init a bvh: {:?}", err);
+                    return Err(ErrorCode::Unknown);
+                }
+            };
+            info!(
+                "It took {:?}s to build the `{:?}' bvh",
+                time.as_secs_f32(),
+                bvh_type
+            );
+            info!(
+                "`{:?}' bvh structure:\n{}",
+                bvh_type,
+                BvhNode::to_string(scene.bvhs.get(&BvhType::DefaultTopDown).unwrap())
+            );
+            let _ = scene.bvhs_build_times.insert(bvh_type, time);
+        }
+
         Ok(scene)
     }
 

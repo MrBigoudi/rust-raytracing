@@ -8,24 +8,25 @@ pub mod aabb;
 pub mod default_bottom_up;
 pub mod default_top_down;
 
-#[derive(Debug, Default, Hash, PartialEq, Eq)]
+#[derive(Debug, Default, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum BvhType {
     #[default]
-    None,
-    DefaultBottomUp,
-    DefaultTopDown,
-    Ploc,
-    Other,
+    None = 0,
+    DefaultBottomUp = 1,
+    DefaultTopDown = 2,
+    Ploc = 3,
+    Other = 4,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BvhNode {
     pub bounding_box: Aabb,
     // If not leaf then dummy variable
-    pub triangle_index: usize,
+    pub triangle_index: u32,
     // If child_index == 0 then leaf
-    pub left_child_index: usize,
-    pub right_child_index: usize,
+    pub left_child_index: u32,
+    pub right_child_index: u32,
+    pub padding_1: u32,
 }
 
 impl BvhNode {
@@ -40,15 +41,15 @@ impl BvhNode {
 
     pub fn to_string(bvh: &Vec<BvhNode>) -> String {
         if bvh.is_empty() {
-            return "BVH is empty.".to_string();
+            return "BVH is empty".to_string();
         }
         // Start displaying from the root node at index 0
         Self::to_string_node(bvh, 0, 0)
     }
 
-    fn to_string_node(bvh: &Vec<BvhNode>, node_index: usize, depth: usize) -> String {
-        let node = &bvh[node_index];
-        let indent = "    ".repeat(2 * depth);
+    fn to_string_node(bvh: &Vec<BvhNode>, node_index: u32, depth: u32) -> String {
+        let node = &bvh[node_index as usize];
+        let indent = "    ".repeat((2 * depth) as usize);
         let mut output = String::new();
 
         if node.is_leaf() {

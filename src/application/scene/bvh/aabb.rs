@@ -1,4 +1,5 @@
 use log::error;
+use std::fmt::Debug;
 
 use crate::application::{
     core::error::ErrorCode,
@@ -13,18 +14,31 @@ pub enum AabbAxis {
     Z,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct Aabb {
     pub mins: glam::Vec3,
+    pub padding_1: f32,
     pub maxs: glam::Vec3,
+    pub padding_2: f32,
+}
+
+impl Debug for Aabb {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Aabb")
+            .field("mins", &self.mins)
+            .field("maxs", &self.maxs)
+            .finish()
+    }
 }
 
 impl Default for Aabb {
     fn default() -> Self {
         Self {
             mins: f32::INFINITY * glam::Vec3::ONE,
+            padding_1: 0.,
             maxs: f32::NEG_INFINITY * glam::Vec3::ONE,
+            padding_2: 0.,
         }
     }
 }

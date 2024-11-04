@@ -140,6 +140,8 @@ pub enum Key {
     Enter,
     Delete,
     Escape,
+    Shift,
+    Super,
 }
 
 impl Key {
@@ -178,6 +180,8 @@ impl Key {
             KeyCode::Enter => Some(Key::Enter),
             KeyCode::Delete => Some(Key::Delete),
             KeyCode::Escape => Some(Key::Escape),
+            KeyCode::ShiftLeft => Some(Key::Shift),
+            KeyCode::SuperLeft => Some(Key::Super),
             _ => {
                 warn! {"Winit Key: {:?} is not yet supported...", key_code};
                 None

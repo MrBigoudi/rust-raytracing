@@ -1,5 +1,9 @@
 import scene.scene; 
-import raytracer.raytracer; 
+import raytracer.raytracer;
+
+///////////////////////////////////////////////////////
+//////////////////////// SET 0 ////////////////////////
+///////////////////////////////////////////////////////
 
 //////////// FRAMEBUFFER
 static const int DESCRIPTOR_SET_FRAMEBUFFER = 0;
@@ -7,13 +11,11 @@ static const int DESCRIPTOR_BINDING_FRAMEBUFFER = 0;
 [[vk::binding(DESCRIPTOR_BINDING_FRAMEBUFFER, DESCRIPTOR_SET_FRAMEBUFFER)]]
 RWTexture2D<float4> _Framebuffer;
 
-
 //////////// TRIANGLES
 static const int DESCRIPTOR_SET_TRIANGLES = 0;
 static const int DESCRIPTOR_BINDING_TRIANGLES = 1;
 [[vk::binding(DESCRIPTOR_BINDING_TRIANGLES, DESCRIPTOR_SET_TRIANGLES)]]
 RWStructuredBuffer<Triangle> _Triangles;
-
 
 //////////// MODELS
 static const int DESCRIPTOR_SET_MODELS = 0;
@@ -21,26 +23,63 @@ static const int DESCRIPTOR_BINDING_MODELS = 2;
 [[vk::binding(DESCRIPTOR_BINDING_MODELS, DESCRIPTOR_SET_MODELS)]]
 RWStructuredBuffer<Model> _Models;
 
-
 //////////// MATERIALS
 static const int DESCRIPTOR_SET_MATERIALS = 0;
 static const int DESCRIPTOR_BINDING_MATERIALS = 3;
 [[vk::binding(DESCRIPTOR_BINDING_MATERIALS, DESCRIPTOR_SET_MATERIALS)]]
 RWStructuredBuffer<Material> _Materials;
 
+
+
+
+
+///////////////////////////////////////////////////////
+//////////////////////// SET 1 ////////////////////////
+///////////////////////////////////////////////////////
+
+//////////// BVHS
+static const int DESCRIPTOR_SET_BVHS = 1;
+static const int DESCRIPTOR_BINDING_BVHS = 0;
+[[vk::binding(DESCRIPTOR_BINDING_BVHS, DESCRIPTOR_SET_BVHS)]]
+RWStructuredBuffer<BvhNode> _Bvhs;
+
+
+
+
+
+///////////////////////////////////////////////////////
+//////////////////////// SET 2 ////////////////////////
+///////////////////////////////////////////////////////
+
 //////////// CAMERA
-static const int DESCRIPTOR_SET_CAMERA_UBO = 1;
+static const int DESCRIPTOR_SET_CAMERA_UBO = 2;
 static const int DESCRIPTOR_BINDING_CAMERA_UBO = 0;
 [[vk::binding(DESCRIPTOR_BINDING_CAMERA_UBO, DESCRIPTOR_SET_CAMERA_UBO)]]
 ConstantBuffer<Camera> _Camera;
+
+
+
+
+
+///////////////////////////////////////////////////////
+//////////////////////// CSTS /////////////////////////
+///////////////////////////////////////////////////////
 
 //////////// PUSH CONSTANTS
 [[vk::push_constant]]
 cbuffer _PushConstants {
     uint _NbTriangles;
     uint _IsWireframeOn;
+    uint _BvhType;
 }
 
+
+
+
+
+///////////////////////////////////////////////////////
+//////////////////////// MAIN /////////////////////////
+///////////////////////////////////////////////////////
 
 //////////// DISPATCH COMPUTE
 static const int THREAD_GROUP_SIZE_X = 32;
@@ -72,6 +111,9 @@ void main(uint3 thread_id : SV_DispatchThreadID) {
     get_closest_hit(ray, _NbTriangles, closest_hit, _Triangles, _Models);
 
     float4 color = float4(0.f, 0.f, 0.f, 1.f);
+    if (_BvhType != BvhType::None) {
+        color *= (_Bvhs[0].triangle_index + 1);
+    }
     get_color(closest_hit, color, _Triangles, _Models, _Materials, (_IsWireframeOn != 0));
 
     _Framebuffer[texel_coord] = color;

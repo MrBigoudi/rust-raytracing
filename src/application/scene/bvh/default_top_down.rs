@@ -1,4 +1,4 @@
-use log::{error, info};
+use log::error;
 
 use crate::application::{
     core::error::ErrorCode,
@@ -37,6 +37,7 @@ impl<'a> BvhDefaultTopDown<'a> {
             triangle_index: 0,
             left_child_index: 0,
             right_child_index: 0,
+            padding_1: 0,
         };
         let triangles = (0..scene.triangles.len()).collect::<Vec<usize>>();
 
@@ -83,10 +84,10 @@ impl<'a> BvhDefaultTopDown<'a> {
         // Update parent index
         let nb_nodes_in_bvh = self.bvh.len();
         let bvh_node = &mut self.bvh[bvh_node_index];
-        bvh_node.base.left_child_index = nb_nodes_in_bvh;
+        bvh_node.base.left_child_index = nb_nodes_in_bvh as u32;
         self.bvh.push(left_child);
         let bvh_node = &mut self.bvh[bvh_node_index];
-        bvh_node.base.right_child_index = nb_nodes_in_bvh + 1;
+        bvh_node.base.right_child_index = (nb_nodes_in_bvh + 1) as u32;
         self.bvh.push(right_child);
     }
 
@@ -99,9 +100,10 @@ impl<'a> BvhDefaultTopDown<'a> {
         let left_child = BvhDefaultTopDownNode {
             base: BvhNode {
                 bounding_box: Aabb::from_triangle(&left_triangle, left_model_matrix),
-                triangle_index: left_triangle_index,
+                triangle_index: left_triangle_index as u32,
                 left_child_index: 0,
                 right_child_index: 0,
+                padding_1: 0,
             },
             triangles: vec![left_triangle_index],
         };
@@ -112,9 +114,10 @@ impl<'a> BvhDefaultTopDown<'a> {
         let right_child = BvhDefaultTopDownNode {
             base: BvhNode {
                 bounding_box: Aabb::from_triangle(&right_triangle, right_model_matrix),
-                triangle_index: right_triangle_index,
+                triangle_index: right_triangle_index as u32,
                 left_child_index: 0,
                 right_child_index: 0,
+                padding_1: 0,
             },
             triangles: vec![right_triangle_index],
         };
@@ -140,10 +143,6 @@ impl<'a> BvhDefaultTopDown<'a> {
         let is_on_the_right = |triangle: &Triangle| -> bool {
             let model_matrix = self.scene.models[triangle.model_index].model_matrix;
             let centroid = triangle.get_centroid(model_matrix);
-            info!(
-                "aabb: {:?}, triangle: {:?}, centroid: {:?}",
-                aabb, triangle, centroid
-            );
             // Check if the centroid is greater than half of the length
             // of the current bounding volume in the bounding volume's biggest direction
             match longest_axis {
@@ -208,6 +207,7 @@ impl<'a> BvhDefaultTopDown<'a> {
         let left_child = BvhDefaultTopDownNode {
             base: BvhNode {
                 bounding_box: left_aabb,
+                triangle_index: left_triangles_indices[0] as u32,
                 ..Default::default()
             },
             triangles: left_triangles_indices,
@@ -216,6 +216,7 @@ impl<'a> BvhDefaultTopDown<'a> {
         let right_child = BvhDefaultTopDownNode {
             base: BvhNode {
                 bounding_box: right_aabb,
+                triangle_index: right_triangles_indices[0] as u32,
                 ..Default::default()
             },
             triangles: right_triangles_indices,

@@ -15,7 +15,7 @@ use winit::{
 };
 
 use crate::application::{
-    core::error::ErrorCode, scene::Scene, window::key_map::winit_character_to_imgui_key,
+    core::error::ErrorCode, scene::{bvh::BvhType, Scene}, window::key_map::winit_character_to_imgui_key,
 };
 
 use super::{setup::frame_data::FRAME_OVERLAP, types::VulkanContext};
@@ -217,6 +217,11 @@ impl VulkanContext<'_> {
             .size([300.0, 110.0], imgui::Condition::FirstUseEver)
             .build(|| {
                 ui.checkbox("Toogl wireframe mode", &mut scene.is_wireframe_on);
+                ui.new_line();
+                ui.text("BVH type");
+                ui.radio_button("None", &mut scene.bvh_type, BvhType::None);
+                ui.same_line();
+                ui.radio_button("Default Top Down", &mut scene.bvh_type, BvhType::DefaultTopDown);
             });
 
         self.gui

@@ -140,6 +140,25 @@ impl Application<'_> {
                 );
                 return Err(ErrorCode::Unknown);
             }
+            // Update the bvh
+            if scene.bvh_last_type != scene.bvh_type {
+                if let Some(ref mut pipelines) = &mut self.pipelines {
+                    if let Some(vulkan_context) = &self.vulkan_context {
+                        if let Err(err) = pipelines.raytracing_pipeline.update_bvhs_buffer(vulkan_context, scene){
+                            error!(
+                                "Failed to update the bvhs buffer in the raytracing pipeline when updating the application: {:?}",
+                                err
+                            );
+                            return Err(ErrorCode::Unknown);
+                        }
+                    } else {
+                        warn!("The vulkan context is not initialized correctly...");
+                    }
+                } else {
+                    warn!("The pipelines are not initialized correctly...");
+                }
+                scene.bvh_last_type = scene.bvh_type;
+            }
         } else {
             warn!("The scene is not initialized correctly...");
         }
