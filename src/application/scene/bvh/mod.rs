@@ -1,4 +1,5 @@
 use aabb::Aabb;
+use std::fmt::Debug;
 
 use crate::application::core::error::ErrorCode;
 
@@ -18,7 +19,7 @@ pub enum BvhType {
     Other = 4,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub struct BvhNode {
     pub bounding_box: Aabb,
     // If not leaf then dummy variable
@@ -26,7 +27,19 @@ pub struct BvhNode {
     // If child_index == 0 then leaf
     pub left_child_index: u32,
     pub right_child_index: u32,
+    #[allow(dead_code)]
     pub padding_1: u32,
+}
+
+impl Debug for BvhNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BvhNode")
+            .field("bounding_box", &self.bounding_box)
+            .field("triangle_index", &self.triangle_index)
+            .field("left_child_index", &self.left_child_index)
+            .field("right_child_index", &self.right_child_index)
+            .finish()
+    }
 }
 
 impl BvhNode {

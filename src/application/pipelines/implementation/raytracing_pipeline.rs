@@ -199,10 +199,9 @@ impl RaytracingPipeline {
                     return Err(ErrorCode::Unknown);
                 }
             };
-            match vulkan_context.map_data_to_buffer(
-                data.as_slice(),
-                BufferUsageFlags::STORAGE_BUFFER,
-            ) {
+            match vulkan_context
+                .map_data_to_buffer(data.as_slice(), BufferUsageFlags::STORAGE_BUFFER)
+            {
                 Ok(buffer) => Some(buffer),
                 Err(err) => {
                     error!(
