@@ -1,0 +1,88 @@
+use aabb::Aabb;
+
+use crate::application::core::error::ErrorCode;
+
+use super::Scene;
+
+pub mod aabb;
+pub mod default_bottom_up;
+pub mod default_top_down;
+
+#[derive(Debug, Default, Hash, PartialEq, Eq)]
+pub enum BvhType {
+    #[default]
+    None,
+    DefaultBottomUp,
+    DefaultTopDown,
+    Ploc,
+    Other,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct BvhNode {
+    pub bounding_box: Aabb,
+    // If not leaf then dummy variable
+    pub triangle_index: usize,
+    // If child_index == 0 then leaf
+    pub left_child_index: usize,
+    pub right_child_index: usize,
+}
+
+impl BvhNode {
+    pub fn is_leaf(&self) -> bool {
+        if self.left_child_index == 0 || self.right_child_index == 0 {
+            assert_eq!(self.left_child_index, self.right_child_index);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn to_string(bvh: &Vec<BvhNode>) -> String {
+        if bvh.is_empty() {
+            return "BVH is empty.".to_string();
+        }
+        // Start displaying from the root node at index 0
+        Self::to_string_node(bvh, 0, 0)
+    }
+
+    fn to_string_node(bvh: &Vec<BvhNode>, node_index: usize, depth: usize) -> String {
+        let node = &bvh[node_index];
+        let indent = "    ".repeat(2 * depth);
+        let mut output = String::new();
+
+        if node.is_leaf() {
+            output.push_str(&format!(
+                "{}Leaf Node - Index: {}, Triangle Index: {}, Bounding Box: {:?}\n",
+                indent, node_index, node.triangle_index, node.bounding_box
+            ));
+        } else {
+            output.push_str(&format!(
+                "{}Internal Node - Index: {}, Bounding Box: {:?}\n",
+                indent, node_index, node.bounding_box
+            ));
+            output.push_str(&format!(
+                "{}    Left Child Index: {}\n",
+                indent, node.left_child_index
+            ));
+            output.push_str(&format!(
+                "{}    Right Child Index: {}\n",
+                indent, node.right_child_index
+            ));
+
+            // Recursively accumulate the left and right child outputs
+            output.push_str(&Self::to_string_node(bvh, node.left_child_index, depth + 1));
+            output.push_str(&Self::to_string_node(
+                bvh,
+                node.right_child_index,
+                depth + 1,
+            ));
+        }
+
+        output
+    }
+}
+
+pub trait Bvh {
+    fn build(scene: &Scene) -> Result<Vec<BvhNode>, ErrorCode>;
+}

@@ -68,7 +68,7 @@ impl Camera {
             yaw: -90.,
             pitch: 0.,
             is_accelerating: false,
-            moving_mode: CameraMode::Dynamic,
+            moving_mode: CameraMode::Fixed,
         };
 
         camera.update_vectors();

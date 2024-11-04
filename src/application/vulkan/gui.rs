@@ -14,7 +14,9 @@ use winit::{
     window::Window,
 };
 
-use crate::application::{core::error::ErrorCode, scene::Scene, window::key_map::winit_character_to_imgui_key};
+use crate::application::{
+    core::error::ErrorCode, scene::Scene, window::key_map::winit_character_to_imgui_key,
+};
 
 use super::{setup::frame_data::FRAME_OVERLAP, types::VulkanContext};
 

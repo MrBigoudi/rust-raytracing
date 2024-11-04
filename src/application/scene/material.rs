@@ -1,6 +1,6 @@
 use glam::Vec4;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[repr(C)]
 pub struct Material {
     pub ambient: Vec4,
