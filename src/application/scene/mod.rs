@@ -107,11 +107,11 @@ impl Scene {
                 time.as_secs_f32(),
                 bvh_type
             );
-            info!(
-                "`{:?}' bvh structure:\n{}",
-                bvh_type,
-                BvhNode::to_string(scene.bvhs.get(&BvhType::DefaultTopDown).unwrap())
-            );
+            // info!(
+            //     "`{:?}' bvh structure:\n{}",
+            //     bvh_type,
+            //     BvhNode::to_string(scene.bvhs.get(&BvhType::DefaultTopDown).unwrap())
+            // );
             let _ = scene.bvhs_build_times.insert(bvh_type, time);
         }
 

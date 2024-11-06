@@ -9,7 +9,12 @@ public struct Hit {
     public uint triangle_index;
 };
 
-public Hit ray_triangle_intersection(Ray ray, uint triangle_index, RWStructuredBuffer<Triangle> triangles, RWStructuredBuffer<Model> models){
+public func ray_triangle_intersection(
+    ray: Ray,
+    triangle_index: uint,
+    triangles: RWStructuredBuffer<Triangle>,
+    models: RWStructuredBuffer<Model>,
+    ) -> Hit{
     Hit hit;
 
     Triangle triangle = triangles[triangle_index];
@@ -72,7 +77,13 @@ public Hit ray_triangle_intersection(Ray ray, uint triangle_index, RWStructuredB
     return hit;
 }
 
-public void get_closest_hit(Ray ray, uint nb_triangles, inout Hit closest_hit, RWStructuredBuffer<Triangle> triangles, RWStructuredBuffer<Model> models){
+public func get_closest_hit(
+    ray: Ray,
+    nb_triangles: uint,
+    inout closest_hit: Hit,
+    triangles: RWStructuredBuffer<Triangle>,
+    models: RWStructuredBuffer<Model>,
+    ){
     for(uint i=0; i<nb_triangles; i++){
         Hit cur_hit = ray_triangle_intersection(ray, i, triangles, models);
         if(cur_hit.did_hit == 0) continue;
@@ -82,13 +93,13 @@ public void get_closest_hit(Ray ray, uint nb_triangles, inout Hit closest_hit, R
     }
 }
 
-public void get_color(
-    Hit hit, 
-    inout float4 color, 
-    RWStructuredBuffer<Triangle> triangles, 
-    RWStructuredBuffer<Model> models, 
-    RWStructuredBuffer<Material> materials,
-    bool is_wireframe_on,
+public func get_color(
+    hit: Hit,
+    inout color: float4,
+    triangles: RWStructuredBuffer<Triangle>,
+    models: RWStructuredBuffer<Model>,
+    materials: RWStructuredBuffer<Material>,
+    is_wireframe_on: bool,
     ){
     if(hit.did_hit == 0) return;
     Triangle hit_triangle = triangles[hit.triangle_index];

@@ -195,7 +195,7 @@ impl Model {
         for (model_index, model) in tobj_models.iter().enumerate() {
             let mut new_model = Model::default();
 
-            Self::display_model(model);
+            // Self::display_model(model);
             let mesh = &model.mesh;
             if let Some(id) = mesh.material_id {
                 // +1 to avoid hitting default material

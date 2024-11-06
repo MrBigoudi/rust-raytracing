@@ -88,7 +88,7 @@ static const int THREAD_GROUP_SIZE_Z = 1;
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
-void main(uint3 thread_id : SV_DispatchThreadID) {
+void main(uint3 thread_id: SV_DispatchThreadID) {
     uint2 texel_coord = thread_id.xy;
 
     uint2 image_size = uint2(0, 0);

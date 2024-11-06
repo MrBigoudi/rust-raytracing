@@ -8,3 +8,5 @@
 
 - BVH raytracing GPU
 - Other BVH construction
+- Load GLTF
+- Add lighting
