@@ -64,7 +64,7 @@ impl Scene {
         let mut models = Vec::new();
         let mut materials = vec![Material::default()];
         if let Err(err) = Model::add_obj(
-            Path::new("cube.obj"),
+            Path::new("suzanne.obj"),
             false,
             &mut triangles,
             &mut models,
@@ -75,9 +75,9 @@ impl Scene {
         }
 
         // panic!("nb tri: {:?}, nb mod: {:?}, nb mat: {:?}", triangles.len(), models.len(), materials.len());
-        let bvh_type = BvhType::None;
+        let bvh_type = BvhType::DefaultTopDown;
         let mut bvhs: HashMap<BvhType, Vec<BvhNode>> = Default::default();
-        let _ = bvhs.insert(bvh_type, Vec::new());
+        let _ = bvhs.insert(BvhType::None, Vec::new());
         let bvhs_build_times: HashMap<BvhType, Duration> = Default::default();
 
         let mut scene = Scene {

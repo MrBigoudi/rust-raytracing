@@ -77,6 +77,32 @@ public func ray_triangle_intersection(
     return hit;
 }
 
+public func ray_bvh_intersection(ray: Ray, bvh_node: BvhNode) -> BvhNodeIntersection {
+    // Check intersection with X,Y,Z-slabs
+    float3 inverse_ray_dir = 1.f / ray.direction.xyz;
+    float3 t1 = (bvh_node.bounding_box.mins - ray.origin.xyz) * inverse_ray_dir;
+    float3 t2 = (bvh_node.bounding_box.maxs - ray.origin.xyz) * inverse_ray_dir;
+    // Check for early exit
+    float t_min = min(t1.x, t2.x);
+    float t_max = max(t1.x, t2.x);
+    if (t_max < 0.f || t_min > t_max) {
+        return BvhNodeIntersection::None;
+    }
+    t_min = max(t_min, min(t1.y, t2.y));
+    t_max = min(t_max, max(t1.y, t2.y));
+    if (t_max < 0.f || t_min > t_max) {
+        return BvhNodeIntersection::None;
+    }
+    t_min = max(t_min, min(t1.z, t2.z));
+    t_max = min(t_max, max(t1.z, t2.z));
+    if (t_max < 0.f || t_min > t_max) {
+        return BvhNodeIntersection::None;
+    }
+
+    // TODO: Check if border
+    return BvhNodeIntersection::NotEdge;
+}
+
 public func get_closest_hit(
     ray: Ray,
     nb_triangles: uint,
@@ -91,6 +117,51 @@ public func get_closest_hit(
             closest_hit = cur_hit;
         }
     }
+}
+
+public func get_closest_hit_bvh(
+    bvh: RWStructuredBuffer<BvhNode>,
+    ray: Ray,
+    inout closest_hit: Hit,
+    triangles: RWStructuredBuffer<Triangle>,
+    models: RWStructuredBuffer<Model>
+    ) {
+
+    // Create a stack for the node indices
+    // At most, the stack size is the number of entries in the bvh
+    // const uint STACK_SIZE = 2*nb_triangles - 1;
+    const uint STACK_SIZE = 1024;
+    uint stack[STACK_SIZE];
+    uint stack_index = 0;
+    // Push the root node onto the stack
+    stack[stack_index] = 0;
+    stack_index++;
+    // Iterate while the stack is not empty
+    while (stack_index > 0) {
+        // Pop the current node
+        stack_index--;
+        uint current_node_index = stack[stack_index];
+        BvhNode current_node = bvh[current_node_index];
+        // Check if the ray intersects the current BVH node's bounding box
+        BvhNodeIntersection intersection_type = ray_bvh_intersection(ray, current_node);
+        if (intersection_type != BvhNodeIntersection::None) {
+            // Check if the current node is a leaf
+            if (is_leaf(current_node)) {
+                Hit cur_hit = ray_triangle_intersection(ray, current_node.triangle_index, triangles, models);
+                if (cur_hit.did_hit == 0) continue;
+                if (closest_hit.did_hit == 0 || cur_hit.coords.w < closest_hit.coords.w) {
+                    closest_hit = cur_hit;
+                }
+            } else {
+                // Push the children onto the stack
+                stack[stack_index] = current_node.left_child_index;
+                stack_index++;
+                stack[stack_index] = current_node.right_child_index;
+                stack_index++;
+            }
+        }
+    }
+
 }
 
 public func get_color(
@@ -117,3 +188,4 @@ public func get_color(
         }
     }
 }
+
