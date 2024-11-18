@@ -18,6 +18,7 @@ impl SwapchainSupportDetails {
 }
 
 impl VulkanContext<'_> {
+    #[allow(unused)]
     pub fn get_swapchain_support_details(&self) -> Result<SwapchainSupportDetails, ErrorCode> {
         self.query_swapchain_support(self.get_physical_device()?)
     }

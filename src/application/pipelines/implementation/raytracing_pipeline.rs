@@ -1,3 +1,5 @@
+// use std::time::Instant;
+
 use ash::vk::{
     BufferUsageFlags, DescriptorBufferInfo, DescriptorImageInfo, DescriptorSet,
     DescriptorSetLayoutCreateFlags, DescriptorType, ImageLayout, Pipeline, PipelineBindPoint,
@@ -41,6 +43,8 @@ pub struct RaytracingPushConstant {
     pub nb_triangles: u32,
     pub is_wireframe_on: u32,
     pub bvh_type: u32,
+    pub should_display_bvh: u32,
+    pub bvh_depth_to_display: u32,
 }
 
 impl RaytracingPipeline {
@@ -49,6 +53,7 @@ impl RaytracingPipeline {
         vulkan_context: &VulkanContext,
         scene: &Scene,
     ) -> Result<(), ErrorCode> {
+        // Wait until all is done
         let dst_offset = 0;
         let data = [scene.camera.get_gpu_data()];
         if let Err(err) = vulkan_context.update_buffer(&self.buffers.camera_ubo, &data, dst_offset)
@@ -189,6 +194,7 @@ impl RaytracingPipeline {
             }
         };
 
+        // let start = Instant::now();
         let bvhs_ssbo = if scene.bvh_type == BvhType::None {
             None
         } else {
@@ -212,6 +218,7 @@ impl RaytracingPipeline {
                 }
             }
         };
+        // panic!("time: {}", (Instant::now()-start).as_nanos());
 
         let camera_ubo = match vulkan_context.map_data_to_buffer(
             &[scene.camera.get_gpu_data()],
@@ -598,6 +605,8 @@ impl ComputePipeline for RaytracingPipeline {
             nb_triangles: scene.triangles.len() as u32,
             is_wireframe_on: scene.is_wireframe_on as u32,
             bvh_type: scene.bvh_last_type as u32,
+            should_display_bvh: scene.should_display_bvh as u32,
+            bvh_depth_to_display: scene.bvh_depth_to_display,
         };
         unsafe {
             device.cmd_push_constants(

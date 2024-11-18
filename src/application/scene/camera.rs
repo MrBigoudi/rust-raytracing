@@ -96,13 +96,7 @@ impl Camera {
     }
 
     fn get_view(&self) -> Mat4 {
-        Mat4::look_at_rh(self.eye, self.eye + self.at, self.up).transpose()
-        // Mat4{
-        //     x_axis: Vec4::new(1., 0., 0., 0.),
-        //     y_axis: Vec4::new(0., -1., 0., 0.),
-        //     z_axis: Vec4::new(0., 0., 1., 5.),
-        //     w_axis: Vec4::new(0., 0., 0., 1.),
-        // }
+        Mat4::look_at_rh(self.eye, self.eye + self.at, self.up)
     }
 
     fn get_plane_height(&self) -> f32 {
@@ -153,7 +147,7 @@ impl Camera {
         let view_matrix = self.get_view();
         let plane_height = self.get_plane_height();
         let plane_width = self.get_plane_width(plane_height);
-        let view_matrix_inverse = Mat4::inverse(&Mat4::transpose(&view_matrix));
+        let view_matrix_inverse = Mat4::inverse(&view_matrix);
         let position = Vec4::new(self.eye.x, self.eye.y, self.eye.z, 1.);
 
         CameraGPU {

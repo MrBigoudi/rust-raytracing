@@ -218,7 +218,7 @@ impl VulkanContext<'_> {
         ui.window("Raytracing Parameters")
             .size([300.0, 110.0], imgui::Condition::FirstUseEver)
             .build(|| {
-                ui.checkbox("Toogl wireframe mode", &mut scene.is_wireframe_on);
+                ui.checkbox("Toogle wireframe mode", &mut scene.is_wireframe_on);
                 ui.new_line();
                 ui.text("BVH type");
                 ui.radio_button("None", &mut scene.bvh_type, BvhType::None);
@@ -227,6 +227,14 @@ impl VulkanContext<'_> {
                     "Default Top Down",
                     &mut scene.bvh_type,
                     BvhType::DefaultTopDown,
+                );
+                ui.new_line();
+                ui.checkbox("Display Bvh", &mut scene.should_display_bvh);
+                ui.slider(
+                    "Bvh depth to display",
+                    0,
+                    scene.get_max_bvh_detph(),
+                    &mut scene.bvh_depth_to_display,
                 );
             });
 

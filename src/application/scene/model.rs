@@ -24,10 +24,12 @@ impl Default for Model {
 }
 
 impl Model {
+    #[allow(unused)]
     pub fn triangle() -> (Model, Vec<Triangle>) {
         (Model::default(), vec![Triangle::default()])
     }
 
+    #[allow(unused)]
     pub fn add_obj(
         object_file_name: &Path,
         has_material_file: bool,
@@ -121,7 +123,8 @@ impl Model {
         }
     }
 
-    fn display_model(tobj_model: &tobj::Model) {
+    #[allow(unused)]
+    pub fn display_model(tobj_model: &tobj::Model) {
         let model = tobj_model;
         let mesh = &model.mesh;
         info!("model.name = \'{}\'", model.name);
@@ -286,5 +289,92 @@ impl Model {
         };
 
         Ok(Self::create_models_triangles_materials(models, materials))
+    }
+
+    #[allow(unused)]
+    pub fn add_sphere(
+        resolution: u32,
+        radius: f32,
+        center: glam::Vec3,
+        material: Option<Material>,
+        in_out_triangles: &mut Vec<Triangle>,
+        in_out_models: &mut Vec<Model>,
+        in_out_materials: &mut Vec<Material>,
+    ) -> Result<(), ErrorCode> {
+        let step_phi = std::f32::consts::PI / (resolution as f32);
+        let step_theta = 2. * std::f32::consts::PI / (resolution as f32);
+
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+
+        // Build the vertices
+        for i in 0..=resolution {
+            let phi = (i as f32) * step_phi;
+            for j in 0..=resolution {
+                let theta = (j as f32) * step_theta;
+
+                let x = phi.sin() * theta.sin();
+                let y = phi.cos();
+                let z = phi.sin() * theta.cos();
+
+                vertices.push(glam::Vec3 { x, y, z });
+            }
+        }
+
+        // Build the indices
+        for i in 0..resolution {
+            for j in 0..resolution {
+                let first = i * (resolution + 1) + j;
+                let second = first + resolution + 1;
+
+                indices.push((first, second, first + 1));
+                indices.push((second, second + 1, first + 1));
+            }
+        }
+
+        // Build the material
+        let material_index = if material.is_some() {
+            in_out_materials.len()
+        } else {
+            0
+        };
+        if let Some(material) = material {
+            in_out_materials.push(material);
+        }
+
+        // Build the model
+        let sphere_model = Model {
+            model_matrix: glam::Mat4 {
+                x_axis: glam::Vec4::new(radius, 0., 0., center.x),
+                y_axis: glam::Vec4::new(0., radius, 0., center.y),
+                z_axis: glam::Vec4::new(0., 0., radius, center.z),
+                w_axis: glam::Vec4::new(0., 0., 0., 1.),
+            },
+            material_index,
+        };
+
+        // Build the triangles
+        let spher_model_index = in_out_models.len();
+        for index in indices {
+            let x = index.0 as usize;
+            let y = index.1 as usize;
+            let z = index.2 as usize;
+            let p0 = glam::Vec4::new(vertices[x].x, vertices[x].y, vertices[x].z, 1.);
+            let p1 = glam::Vec4::new(vertices[y].x, vertices[y].y, vertices[y].z, 1.);
+            let p2 = glam::Vec4::new(vertices[z].x, vertices[z].y, vertices[z].z, 1.);
+
+            let triangle = Triangle {
+                p0,
+                p1,
+                p2,
+                model_index: spher_model_index,
+            };
+
+            in_out_triangles.push(triangle);
+        }
+
+        in_out_models.push(sphere_model);
+
+        Ok(())
     }
 }

@@ -43,6 +43,6 @@ fn main() {
         }
     }
 
-    // rerun when shaders change
+    // Rerun when shaders change
     println!("cargo:rerun-if-changed=src/shaders");
 }

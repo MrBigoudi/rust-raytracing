@@ -69,20 +69,20 @@ impl Application<'_> {
             }
         };
 
+        debug!("Initializing the scene...");
+        let scene = match Scene::init(&parameters) {
+            Ok(scene) => scene,
+            Err(err) => {
+                error!("Failed to initialize the scene: {:?}", err);
+                return Err(ErrorCode::InitializationFailure);
+            }
+        };
+
         debug!("Initializing the vulkan context...");
         let vulkan_context = match VulkanContext::init(&parameters, &window) {
             Ok(vulkan_context) => vulkan_context,
             Err(err) => {
                 error!("Failed to initialize the vulkan context: {:?}", err);
-                return Err(ErrorCode::InitializationFailure);
-            }
-        };
-
-        debug!("Initializing the scene...");
-        let scene = match Scene::init(&vulkan_context) {
-            Ok(scene) => scene,
-            Err(err) => {
-                error!("Failed to initialize the scene: {:?}", err);
                 return Err(ErrorCode::InitializationFailure);
             }
         };

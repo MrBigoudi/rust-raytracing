@@ -25,14 +25,14 @@ public struct BvhNode {
     public uint left_child_index;
     public uint right_child_index;
     public float padding_1;
+
+    public func is_leaf()->bool {
+        return left_child_index == 0 && right_child_index == 0;
+    }
 }
 
 public enum BvhNodeIntersection {
     None,
     Edge,
     NotEdge,
-}
-
-public func is_leaf(bvh_node: BvhNode)->bool {
-    return (bvh_node.left_child_index == 0) && (bvh_node.right_child_index == 0);
 }

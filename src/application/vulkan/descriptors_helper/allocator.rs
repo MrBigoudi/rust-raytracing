@@ -55,6 +55,7 @@ impl DescriptorAllocator {
         Ok(())
     }
 
+    #[allow(unused)]
     pub fn reset_pool(&mut self, device: &Device) -> Result<(), ErrorCode> {
         if let Err(err) =
             unsafe { device.reset_descriptor_pool(self.pool, DescriptorPoolResetFlags::empty()) }

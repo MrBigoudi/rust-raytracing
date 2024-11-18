@@ -176,7 +176,7 @@ impl VulkanContext<'_> {
             [SubmitInfo2::default().command_buffer_infos(&command_buffer_submit_info)];
 
         // Submit command buffer to the queue and execute it
-        // the render fence will now block until the graphic commands finish execution
+        // the render fence will now block until the graphics commands finish execution
         let graphics_queue = self.get_queues()?.graphics_queue.unwrap();
         if let Err(err) =
             unsafe { device.queue_submit2(graphics_queue, &submit_info, immediate.fence) }
@@ -188,7 +188,7 @@ impl VulkanContext<'_> {
             return Err(ErrorCode::VulkanFailure);
         }
 
-        let timeout = 1e10 as u64;
+        let timeout = 10_000_000_000_u64; // 10 secs
         let should_wait_all = true;
         if let Err(err) =
             unsafe { device.wait_for_fences(&[immediate.fence], should_wait_all, timeout) }

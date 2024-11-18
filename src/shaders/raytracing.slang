@@ -66,12 +66,16 @@ ConstantBuffer<Camera> _Camera;
 ///////////////////////////////////////////////////////
 
 //////////// PUSH CONSTANTS
-[[vk::push_constant]]
-cbuffer _PushConstants {
-    uint _NbTriangles;
-    uint _IsWireframeOn;
-    uint _BvhType;
+struct PushConstant {
+    uint nb_triangles;
+    uint is_wireframe_on;
+    uint bvh_type;
+    uint should_display_bvh;
+    uint bvh_depth_to_display;
 }
+
+[[vk::push_constant]]
+ConstantBuffer<PushConstant> _PushConstants;
 
 
 
@@ -105,16 +109,25 @@ void main(uint3 thread_id: SV_DispatchThreadID) {
     Ray ray = get_ray(pixel_position, _Camera);
     // Ray ray = get_ray(pixel_position, Camera());
 
+    float4 bvh_color = float4(0.f, 0.f, 0.f, 0.f);
     Hit closest_hit;
     closest_hit.did_hit = 0;
-    if (_BvhType == BvhType::None) {
-        get_closest_hit(ray, _NbTriangles, closest_hit, _Triangles, _Models);
+    if (_PushConstants.bvh_type == BvhType::None) {
+        get_closest_hit(ray, _PushConstants.nb_triangles, closest_hit, _Triangles, _Models);
     } else {
-        get_closest_hit_bvh(_Bvhs, ray, closest_hit, _Triangles, _Models);
+        bool should_display_bvh = (_PushConstants.should_display_bvh != 0);
+        get_closest_hit_bvh(_Bvhs, ray, closest_hit, _Triangles, _Models,
+            bvh_color, should_display_bvh, _PushConstants.bvh_depth_to_display
+        );
     }
 
-    float4 color = float4(0.f, 0.f, 0.f, 1.f);
-    get_color(closest_hit, color, _Triangles, _Models, _Materials, (_IsWireframeOn != 0));
+    float4 color = bvh_color;
+    get_color(closest_hit, color, _Triangles, _Models, _Materials, (_PushConstants.is_wireframe_on != 0));
+
+    // // Alpha blending assuming there is no transparent material in the scene
+    // let alpha = bvh_color.w;
+    // color = alpha * bvh_color + (1 - alpha) * color;
+    // color.w = 1.f;
 
     _Framebuffer[texel_coord] = color;
 }

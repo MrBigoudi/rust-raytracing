@@ -20,8 +20,9 @@ pub struct PhysicalDeviceInfo {
     pub properties: PhysicalDeviceProperties,
     pub features: PhysicalDeviceFeatures,
     pub extension_properties: Vec<ExtensionProperties>,
-    #[allow(dead_code)]
+    #[allow(unused)]
     pub memory_properties: PhysicalDeviceMemoryProperties,
+    #[allow(unused)]
     pub depth_format: Option<Format>,
 }
 
@@ -276,6 +277,7 @@ impl VulkanContext<'_> {
         }
     }
 
+    #[allow(unused)]
     pub fn device_find_memory_index(
         &self,
         type_filter: u32,
@@ -298,6 +300,7 @@ impl VulkanContext<'_> {
         Err(ErrorCode::VulkanFailure)
     }
 
+    #[allow(unused)]
     pub fn device_detect_depth_format(&mut self) -> Result<(), ErrorCode> {
         // Format candidates
         let candidates = [

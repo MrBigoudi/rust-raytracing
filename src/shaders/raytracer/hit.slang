@@ -7,6 +7,10 @@ public struct Hit {
     public float4 coords; // (b0, b1, b2, t)
     public uint did_hit;
     public uint triangle_index;
+
+    public func get_distance()->float {
+        return coords.w;
+    }
 };
 
 public func ray_triangle_intersection(
@@ -39,8 +43,7 @@ public func ray_triangle_intersection(
     float3 q = cross(w, e1);
     float a = dot(e0, q);
 
-    // CCW
-    if (dot(n, w) >= 0.) {
+    if (dot(n, w) <= 0.) {
         hit.did_hit = 0;
         return hit;
     }
@@ -100,6 +103,17 @@ public func ray_bvh_intersection(ray: Ray, bvh_node: BvhNode) -> BvhNodeIntersec
     }
 
     // TODO: Check if border
+    float threshold = 0.05;
+    float3 hit_point = ray.origin.xyz + ray.direction.xyz * t_min;
+    bool close_to_x = (abs(hit_point.x - bvh_node.bounding_box.mins.x) < threshold) 
+            || (abs(hit_point.x - bvh_node.bounding_box.maxs.x) < threshold);
+    bool close_to_y = (abs(hit_point.y - bvh_node.bounding_box.mins.y) < threshold) 
+            || (abs(hit_point.y - bvh_node.bounding_box.maxs.y) < threshold);
+    bool close_to_z = (abs(hit_point.z - bvh_node.bounding_box.mins.z) < threshold) 
+            || (abs(hit_point.z - bvh_node.bounding_box.maxs.z) < threshold);
+    if ((close_to_x && close_to_y) || (close_to_x && close_to_z) || (close_to_y && close_to_z)) {
+        return BvhNodeIntersection::Edge;
+    }
     return BvhNodeIntersection::NotEdge;
 }
 
@@ -113,7 +127,7 @@ public func get_closest_hit(
     for(uint i=0; i<nb_triangles; i++){
         Hit cur_hit = ray_triangle_intersection(ray, i, triangles, models);
         if(cur_hit.did_hit == 0) continue;
-        if(closest_hit.did_hit == 0 || cur_hit.coords.w < closest_hit.coords.w){
+        if(closest_hit.did_hit == 0 || cur_hit.get_distance() < closest_hit.get_distance()){
             closest_hit = cur_hit;
         }
     }
@@ -124,7 +138,10 @@ public func get_closest_hit_bvh(
     ray: Ray,
     inout closest_hit: Hit,
     triangles: RWStructuredBuffer<Triangle>,
-    models: RWStructuredBuffer<Model>
+    models: RWStructuredBuffer<Model>,
+    inout color: float4,
+    should_display_bvh: bool,
+    bvh_depth_to_display: uint,
     ) {
 
     // Create a stack for the node indices
@@ -132,9 +149,11 @@ public func get_closest_hit_bvh(
     // const uint STACK_SIZE = 2*nb_triangles - 1;
     const uint STACK_SIZE = 1024;
     uint stack[STACK_SIZE];
+    uint depth_stack[STACK_SIZE];
     uint stack_index = 0;
     // Push the root node onto the stack
     stack[stack_index] = 0;
+    depth_stack[stack_index] = 0;
     stack_index++;
     // Iterate while the stack is not empty
     while (stack_index > 0) {
@@ -142,21 +161,40 @@ public func get_closest_hit_bvh(
         stack_index--;
         uint current_node_index = stack[stack_index];
         BvhNode current_node = bvh[current_node_index];
+        uint current_depth = depth_stack[stack_index];
         // Check if the ray intersects the current BVH node's bounding box
         BvhNodeIntersection intersection_type = ray_bvh_intersection(ray, current_node);
         if (intersection_type != BvhNodeIntersection::None) {
+            // Update the color if needed
+            if (should_display_bvh && (bvh_depth_to_display == current_depth)) {
+                switch(intersection_type){
+                    case BvhNodeIntersection::NotEdge:
+                        float4 bvh_color = float4(0.5f, 0.f, 0.5f, 0.1f);
+                        color = bvh_color;
+                        break;
+                    case BvhNodeIntersection::Edge:
+                        float4 bvh_edge_color = float4(0.7f, 0.f, 0.7f, 0.1f);
+                        color = bvh_edge_color;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
             // Check if the current node is a leaf
-            if (is_leaf(current_node)) {
+            if (current_node.is_leaf()) {
                 Hit cur_hit = ray_triangle_intersection(ray, current_node.triangle_index, triangles, models);
                 if (cur_hit.did_hit == 0) continue;
-                if (closest_hit.did_hit == 0 || cur_hit.coords.w < closest_hit.coords.w) {
+                if (closest_hit.did_hit == 0 || cur_hit.get_distance() < closest_hit.get_distance()) {
                     closest_hit = cur_hit;
                 }
             } else {
                 // Push the children onto the stack
                 stack[stack_index] = current_node.left_child_index;
+                depth_stack[stack_index] = current_depth + 1;
                 stack_index++;
                 stack[stack_index] = current_node.right_child_index;
+                depth_stack[stack_index] = current_depth + 1;
                 stack_index++;
             }
         }
@@ -174,7 +212,10 @@ public func get_color(
     ){
     if(hit.did_hit == 0) return;
     Triangle hit_triangle = triangles[hit.triangle_index];
-    color += materials[models[hit_triangle.model_index].material_index].ambient;
+    // color = materials[models[hit_triangle.model_index].material_index].ambient;
+    // color = float4(0., dot(hit_triangle.get_normal(models), float3(1.,0.,0.)), 0., 1.);
+    // color = float4(0., hit_triangle.p0.y, 0., 1.);
+    color = float4(hit_triangle.get_normal(models), 1.);
 
     // Wireframe color
     if (is_wireframe_on) {

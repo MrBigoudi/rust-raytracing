@@ -29,6 +29,7 @@ impl DescriptorLayoutBuilder<'_> {
         Ok(())
     }
 
+    #[allow(unused)]
     pub fn clear(&mut self) -> Result<(), ErrorCode> {
         self.bindings.clear();
         Ok(())

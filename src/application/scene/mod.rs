@@ -1,7 +1,5 @@
 use std::{
-    collections::HashMap,
-    path::Path,
-    time::{Duration, Instant},
+    collections::HashMap, path::Path, time::{Duration, Instant}
 };
 
 use bvh::{default_top_down::BvhDefaultTopDown, Bvh, BvhNode, BvhType};
@@ -20,7 +18,7 @@ use winit::{
 
 use super::{
     core::error::ErrorCode,
-    vulkan::types::VulkanContext,
+    parameters::ApplicationParameters,
     window::key_map::{Key, KeyState},
 };
 
@@ -43,13 +41,15 @@ pub struct Scene {
     pub bvh_last_type: BvhType, // Cheecky way to check if an update happened
     pub bvhs: HashMap<BvhType, Vec<BvhNode>>,
     pub bvhs_build_times: HashMap<BvhType, Duration>,
+    pub should_display_bvh: bool,
+    pub bvh_depth_to_display: u32,
 }
 
 impl Scene {
     // TODO: Change the initial scene
-    pub fn init(vulkan_context: &VulkanContext) -> Result<Scene, ErrorCode> {
-        let width = vulkan_context.draw_extent.width as f32;
-        let height = vulkan_context.draw_extent.height as f32;
+    pub fn init(parameters: &ApplicationParameters) -> Result<Scene, ErrorCode> {
+        let width = parameters.window_width as f32;
+        let height = parameters.window_height as f32;
         let aspect_ratio = width / height;
         // error!("aspect ratio: {:?}, width: {:?}, height: {:?}", aspect_ratio, width, height);
         let camera = Camera::new(
@@ -63,14 +63,28 @@ impl Scene {
         let mut triangles = Vec::new();
         let mut models = Vec::new();
         let mut materials = vec![Material::default()];
-        if let Err(err) = Model::add_obj(
-            Path::new("suzanne.obj"),
-            false,
+        // if let Err(err) = Model::add_obj(
+        //     Path::new("suzanne.obj"),
+        //     // Path::new("teapot.obj"),
+        //     false,
+        //     &mut triangles,
+        //     &mut models,
+        //     &mut materials,
+        // ) {
+        //     error!("Failed to load a new object to the scene: {:?}", err);
+        //     return Err(ErrorCode::InitializationFailure);
+        // }
+
+        if let Err(err) = Model::add_sphere(
+            16,
+            1.,
+            glam::Vec3::ZERO,
+            None,
             &mut triangles,
             &mut models,
             &mut materials,
         ) {
-            error!("Failed to load a new object to the scene: {:?}", err);
+            error!("Failed to load a new sphere to the scene: {:?}", err);
             return Err(ErrorCode::InitializationFailure);
         }
 
@@ -90,6 +104,8 @@ impl Scene {
             bvh_last_type: bvh_type,
             bvhs,
             bvhs_build_times,
+            should_display_bvh: false,
+            bvh_depth_to_display: 0,
         };
 
         // TODO: Init the bvhs
@@ -227,5 +243,10 @@ impl Scene {
                 .on_mouse_moved(x_offset, y_offset, should_constrain_pitch);
         }
         Ok(())
+    }
+
+    pub fn get_max_bvh_detph(&self) -> u32 {
+        // TODO:
+        10
     }
 }

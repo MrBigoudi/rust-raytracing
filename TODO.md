@@ -3,10 +3,12 @@
 ## To fix
 
 - Validation error: Immediate submit buffer destruction (maybe ImGui error ?)
+- Too big bvh buffer
 
 ## To add
 
-- BVH raytracing GPU
+- GLSL option
+
 - Other BVH construction
 - Load GLTF
 - Add lighting

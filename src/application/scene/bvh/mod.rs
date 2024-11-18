@@ -52,6 +52,7 @@ impl BvhNode {
         }
     }
 
+    #[allow(unused)]
     pub fn to_string(bvh: &Vec<BvhNode>) -> String {
         if bvh.is_empty() {
             return "BVH is empty".to_string();
@@ -60,6 +61,7 @@ impl BvhNode {
         Self::to_string_node(bvh, 0, 0)
     }
 
+    #[allow(unused)]
     fn to_string_node(bvh: &Vec<BvhNode>, node_index: u32, depth: u32) -> String {
         let node = &bvh[node_index as usize];
         let indent = "    ".repeat((2 * depth) as usize);

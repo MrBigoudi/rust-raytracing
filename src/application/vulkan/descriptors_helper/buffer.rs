@@ -39,6 +39,7 @@ impl AllocatedBuffer {
         }
     }
 
+    #[allow(unused)]
     pub fn from_info_struct(
         allocator: &Arc<Mutex<Allocator>>,
         buffer_create_info: &BufferCreateInfo,
