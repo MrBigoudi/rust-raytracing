@@ -17,3 +17,5 @@ imgui = "0.12.0"
 imgui-winit-support = "0.13.0"
 imgui-rs-vulkan-renderer = { version = "1.16.0", features = ["vk-mem", "dynamic-rendering"]}
 winit = "0.30.5"
+rayon = "1.10.0"
+rand = "0.8.5"

@@ -147,7 +147,7 @@ public func get_closest_hit_bvh(
     // Create a stack for the node indices
     // At most, the stack size is the number of entries in the bvh
     // const uint STACK_SIZE = 2*nb_triangles - 1;
-    const uint STACK_SIZE = 1024;
+    const uint STACK_SIZE = 8192;
     uint stack[STACK_SIZE];
     uint depth_stack[STACK_SIZE];
     uint stack_index = 0;
@@ -212,10 +212,10 @@ public func get_color(
     ){
     if(hit.did_hit == 0) return;
     Triangle hit_triangle = triangles[hit.triangle_index];
-    // color = materials[models[hit_triangle.model_index].material_index].ambient;
+    color = materials[models[hit_triangle.model_index].material_index].ambient;
     // color = float4(0., dot(hit_triangle.get_normal(models), float3(1.,0.,0.)), 0., 1.);
     // color = float4(0., hit_triangle.p0.y, 0., 1.);
-    color = float4(hit_triangle.get_normal(models), 1.);
+    // color = float4(hit_triangle.get_normal(models), 1.);
 
     // Wireframe color
     if (is_wireframe_on) {

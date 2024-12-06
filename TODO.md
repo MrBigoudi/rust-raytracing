@@ -3,16 +3,19 @@
 ## To fix
 
 - Validation error: Immediate submit buffer destruction (maybe ImGui error ?)
-- Too big bvh buffer
+- Weird buffer for the teapot ?
+- Inverted normals/axis ?
+- Fix the parallel version of PLOC
 
 ## To add
 
 - GLSL option
 
 - BVH Default Bottom Up construction
-- BVH Ploc parallel construction
 - BVH Better Top Down construction
 
-- Load GLTF
 - Add directional light
-- Add materials
+- Add more complexity in materials
+
+- Create a nice scene 
+- Plot metrics

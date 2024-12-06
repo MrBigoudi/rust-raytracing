@@ -4,13 +4,19 @@ use std::{
     time::{Duration, Instant},
 };
 
-use bvh::{aabb::Aabb, default_top_down::BvhDefaultTopDown, ploc::BvhPloc, Bvh, BvhNode, BvhType};
+use bvh::{
+    aabb::Aabb,
+    default_top_down::BvhDefaultTopDown,
+    ploc::{BvhPloc, BvhPlocParallel},
+    Bvh, BvhNode, BvhType,
+};
 use camera::{Camera, CameraMovement};
 use glam::Vec3;
 use log::{error, info, warn};
 // use log::error;
 use material::Material;
 use model::Model;
+use rand::Rng;
 use triangle::Triangle;
 use winit::{
     dpi::LogicalPosition,
@@ -55,7 +61,8 @@ impl Scene {
         let aspect_ratio = width / height;
         // error!("aspect ratio: {:?}, width: {:?}, height: {:?}", aspect_ratio, width, height);
         let camera = Camera::new(
-            Vec3::new(0., 0., -5.),
+            // Vec3::new(0., 0., -5.),
+            Vec3::new(0., 0., -40.),
             aspect_ratio,
             50.,
             0.1,
@@ -65,34 +72,53 @@ impl Scene {
         let mut triangles = Vec::new();
         let mut models = Vec::new();
         let mut materials = vec![Material::default()];
-        if let Err(err) = Model::add_obj(
-            // Path::new("cube.obj"),
-            Path::new("suzanne.obj"),
-            // Path::new("teapot.obj"),
-            false,
-            &mut triangles,
-            &mut models,
-            &mut materials,
-        ) {
-            error!("Failed to load a new object to the scene: {:?}", err);
-            return Err(ErrorCode::InitializationFailure);
-        }
-
-        // if let Err(err) = Model::add_sphere(
-        //     16,
-        //     1.,
-        //     glam::Vec3::ZERO,
-        //     None,
+        // if let Err(err) = Model::add_obj(
+        //     // Path::new("cube.obj"),
+        //     Path::new("suzanne.obj"),
+        //     // Path::new("teapot.obj"),
+        //     false,
         //     &mut triangles,
         //     &mut models,
         //     &mut materials,
         // ) {
-        //     error!("Failed to load a new sphere to the scene: {:?}", err);
+        //     error!("Failed to load a new object to the scene: {:?}", err);
         //     return Err(ErrorCode::InitializationFailure);
         // }
 
+        let nb_spheres = 20;
+        let sphere_resolution = 128;
+        let min_pos = -50.;
+        let max_pos = 50.;
+        let min_radius = 0.5;
+        let max_radius = 5.;
+        for i in 0..nb_spheres {
+            let mut rng = rand::thread_rng();
+            let radius = rng.gen::<f32>() * (max_radius-min_radius) + min_radius;
+            let material = Material::random();
+            let center = glam::Vec3::new(
+                rng.gen::<f32>() * (max_pos-min_pos) + min_pos,
+                rng.gen::<f32>() * (max_pos-min_pos) + min_pos,
+                rng.gen::<f32>() * (max_pos-min_pos) + min_pos,
+            );
+
+            if let Err(err) = Model::add_sphere(
+                sphere_resolution,
+                radius,
+                center,
+                Some(material),
+                &mut triangles,
+                &mut models,
+                &mut materials,
+            ) {
+                error!("Failed to load a new sphere to the scene: {:?}", err);
+                return Err(ErrorCode::InitializationFailure);
+            }
+
+            info!("Number of triangles after sphere number {}: {}", i, triangles.len());
+        }
+
         // panic!("nb tri: {:?}, nb mod: {:?}, nb mat: {:?}", triangles.len(), models.len(), materials.len());
-        let bvh_type = BvhType::DefaultTopDown;
+        let bvh_type = BvhType::Ploc;
         let mut bvhs: HashMap<BvhType, Vec<BvhNode>> = Default::default();
         let _ = bvhs.insert(BvhType::None, Vec::new());
         let bvhs_build_times: HashMap<BvhType, Duration> = Default::default();
@@ -112,7 +138,11 @@ impl Scene {
         };
 
         // TODO: Init the bvhs
-        let bvhs_to_build = [BvhType::DefaultTopDown, BvhType::Ploc];
+        let bvhs_to_build = [
+            // BvhType::DefaultTopDown,
+            BvhType::Ploc,
+            // BvhType::PlocParallel,
+        ];
         for bvh_type in bvhs_to_build {
             let time = match scene.init_bvh(bvh_type) {
                 Ok(time) => time,
@@ -201,6 +231,20 @@ impl Scene {
                     }
                     Err(err) => {
                         error!("Failed to build the ploc bvh: {:?}", err);
+                        Err(ErrorCode::Unknown)
+                    }
+                }
+            }
+            BvhType::PlocParallel => {
+                let start = Instant::now();
+                match BvhPlocParallel::build(self) {
+                    Ok(new_bvh) => {
+                        let end = Instant::now();
+                        let _ = self.bvhs.insert(BvhType::PlocParallel, new_bvh);
+                        Ok(end - start)
+                    }
+                    Err(err) => {
+                        error!("Failed to build the ploc bvh in parallel: {:?}", err);
                         Err(ErrorCode::Unknown)
                     }
                 }

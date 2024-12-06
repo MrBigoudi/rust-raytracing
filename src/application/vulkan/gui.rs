@@ -230,6 +230,8 @@ impl VulkanContext<'_> {
                 );
                 ui.same_line();
                 ui.radio_button("Ploc", &mut scene.bvh_type, BvhType::Ploc);
+                ui.same_line();
+                ui.radio_button("Ploc Parallel", &mut scene.bvh_type, BvhType::PlocParallel);
                 // TODO: add other bvh types
                 ui.new_line();
                 ui.checkbox("Display Bvh", &mut scene.should_display_bvh);

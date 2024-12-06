@@ -345,16 +345,16 @@ impl Model {
         // Build the model
         let sphere_model = Model {
             model_matrix: glam::Mat4 {
-                x_axis: glam::Vec4::new(radius, 0., 0., center.x),
-                y_axis: glam::Vec4::new(0., radius, 0., center.y),
-                z_axis: glam::Vec4::new(0., 0., radius, center.z),
-                w_axis: glam::Vec4::new(0., 0., 0., 1.),
+                x_axis: glam::Vec4::new(radius, 0., 0., 0.),
+                y_axis: glam::Vec4::new(0., radius, 0., 0.),
+                z_axis: glam::Vec4::new(0., 0., radius, 0.),
+                w_axis: glam::Vec4::new(center.x, center.y, center.z, 1.),
             },
             material_index,
         };
 
         // Build the triangles
-        let spher_model_index = in_out_models.len();
+        let sphere_model_index = in_out_models.len();
         for index in indices {
             let x = index.0 as usize;
             let y = index.1 as usize;
@@ -367,7 +367,7 @@ impl Model {
                 p0,
                 p1,
                 p2,
-                model_index: spher_model_index,
+                model_index: sphere_model_index,
             };
 
             in_out_triangles.push(triangle);

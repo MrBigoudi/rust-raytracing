@@ -1,5 +1,7 @@
 use std::cmp::{max, min};
 
+use rayon::prelude::*;
+
 use log::error;
 
 use crate::application::{
@@ -84,15 +86,23 @@ impl BvhPloc {
         final_bvh: &mut Vec<BvhNode>,
         cur_node_index: usize,
     ) -> Result<(), ErrorCode> {
-        // TODO: update unwraps for matches error
-        let cur_node = self.clusters[cur_node_index].unwrap();
+        let cur_node = match self.clusters[cur_node_index]{
+            Some(cur_node) => cur_node,
+            None => return Err(ErrorCode::AccessFailure)
+        };
         let position = final_bvh.len();
         final_bvh.push(cur_node);
         if !self.is_leaf[cur_node_index] {
-            let left_child = self.left_children[cur_node_index].unwrap();
+            let left_child = match self.left_children[cur_node_index]{
+                Some(child) => child,
+                None => return Err(ErrorCode::AccessFailure)
+            };
             final_bvh[position].left_child_index = final_bvh.len() as u32;
             self.get_bvh_node_recursive(final_bvh, left_child)?;
-            let right_child = self.right_children[cur_node_index].unwrap();
+            let right_child = match self.right_children[cur_node_index]{
+                Some(child) => child,
+                None => return Err(ErrorCode::AccessFailure)
+            };
             final_bvh[position].right_child_index = final_bvh.len() as u32;
             self.get_bvh_node_recursive(final_bvh, right_child)?;
         }
@@ -130,12 +140,90 @@ impl BvhPloc {
         Ok(())
     }
 
+    pub fn prefix_scan_parallel(
+        &mut self,
+        ploc_parameters: &std::sync::Mutex<PlocParameters>,
+    ) -> Result<(), ErrorCode> {
+        // Hillis Steele Scan
+        let n = match ploc_parameters.lock(){
+            Ok(param) => param,
+            Err(_) => return Err(ErrorCode::AccessFailure)
+        }.iteration;
+
+        // TODO: Refactor the parallel version
+        // // Init the output array (in parallel)
+        // let mut ploc_parameters = match ploc_parameters.lock(){
+        //     Ok(param) => param,
+        //     Err(_) => return Err(ErrorCode::AccessFailure)
+        // };
+        // ploc_parameters.prefix_scan.par_iter_mut().enumerate().try_for_each(|(i, scan)| {
+        //     if i == 0 {
+        //         return Ok(());
+        //     }
+        //     *scan = if ploc_parameters.c_in[i - 1].is_some() {
+        //         1
+        //     } else {
+        //         0
+        //     };
+        //     Ok(())
+        // })?;
+
+        // Init the output array (in parallel)
+        (1..n).into_par_iter().try_for_each(|i| {
+            let mut ploc_parameters = match ploc_parameters.lock(){
+                Ok(param) => param,
+                Err(_) => return Err(ErrorCode::AccessFailure)
+            };
+            ploc_parameters.prefix_scan[i] = if ploc_parameters.c_in[i - 1].is_some() {
+                1
+            } else {
+                0
+            };
+            Ok(())
+        })?;
+
+        // Up phase
+        let temp = std::sync::Mutex::new(vec![0; n]);
+        let mut step = 1;
+        while step < n {
+            (step..n).into_par_iter().try_for_each(|i| {
+                let ploc_parameters = match ploc_parameters.lock(){
+                    Ok(param) => param,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                let mut temp = match temp.lock(){
+                    Ok(temp) => temp,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                temp[i] = ploc_parameters.prefix_scan[i] + ploc_parameters.prefix_scan[i - step];
+                Ok(())
+            })?;
+
+            (step..n).into_par_iter().try_for_each(|i| {
+                let mut ploc_parameters = match ploc_parameters.lock(){
+                    Ok(param) => param,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                let mut temp = match temp.lock(){
+                    Ok(temp) => temp,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                ploc_parameters.prefix_scan[i] = temp[i];
+                temp[i] = 0;
+                Ok(())
+            })?;
+
+            step *= 2;
+        }
+
+        Ok(())
+    }
+
     pub fn prefix_scan(&mut self, ploc_parameters: &mut PlocParameters) -> Result<(), ErrorCode> {
         // Hillis Steele Scan
         let n = ploc_parameters.iteration;
 
-        // Init the output array (in parallel)
-        // TODO: implement Rayon (== Rust's OpenMP)
+        // Init the output array
         for i in 1..n {
             ploc_parameters.prefix_scan[i] = if ploc_parameters.c_in[i - 1].is_some() {
                 1
@@ -148,12 +236,10 @@ impl BvhPloc {
         let mut temp = vec![0; n];
         let mut step = 1;
         while step < n {
-            // TODO: implement Rayon (== Rust's OpenMP)
             #[allow(clippy::needless_range_loop)]
             for i in step..n {
                 temp[i] = ploc_parameters.prefix_scan[i] + ploc_parameters.prefix_scan[i - step];
             }
-            // TODO: implement Rayon (== Rust's OpenMP)
             #[allow(clippy::needless_range_loop)]
             for i in step..n {
                 ploc_parameters.prefix_scan[i] = temp[i];
@@ -178,28 +264,36 @@ impl BvhPloc {
         ploc_parameters: &mut PlocParameters,
         index: usize,
     ) -> Result<(), ErrorCode> {
-        // TODO: update unwraps for matches error
         let neighbor_index = ploc_parameters.nearest_neigbor_indices[index];
         // If nearest neighbors of two clusters mutually correspond
         if ploc_parameters.nearest_neigbor_indices[neighbor_index] == index {
             // To avoid conflicts, only meging on the lower index
             if index < neighbor_index {
                 // For global clusters arrays
-                let ci = ploc_parameters.c_in[index].unwrap();
-                let ci_neighbor = ploc_parameters.c_in[neighbor_index].unwrap();
+                let ci = match ploc_parameters.c_in[index]{
+                    Some(c_cin) => c_cin,
+                    None => return Err(ErrorCode::AccessFailure)
+                };
+                let ci_neighbor = match ploc_parameters.c_in[neighbor_index]{
+                    Some(c_cin) => c_cin,
+                    None => return Err(ErrorCode::AccessFailure)
+                };
 
                 // Update new clusters
-                let node = self.clusters[ci].unwrap();
-                let node_neighbor = self.clusters[ci_neighbor].unwrap();
+                let node = match self.clusters[ci]{
+                    Some(node) => node,
+                    None => return Err(ErrorCode::AccessFailure)
+                };
+                let node_neighbor = match self.clusters[ci_neighbor]{
+                    Some(node) => node,
+                    None => return Err(ErrorCode::AccessFailure)
+                };
                 let merged_node = Self::merge_nodes(&node, &node_neighbor);
 
                 #[allow(unused_assignments)]
                 let mut new_cluster_index = 0;
-                // TODO: add omp critical
-                {
-                    new_cluster_index = ploc_parameters.nb_total_clusters;
-                    ploc_parameters.nb_total_clusters += 1;
-                }
+                new_cluster_index = ploc_parameters.nb_total_clusters;
+                ploc_parameters.nb_total_clusters += 1;
 
                 self.clusters[new_cluster_index] = Some(merged_node);
                 self.left_children[new_cluster_index] = Some(ci);
@@ -220,9 +314,14 @@ impl BvhPloc {
         ploc_parameters: &mut PlocParameters,
         index: usize,
     ) -> Result<(), ErrorCode> {
-        // TODO: update unwraps for matches error
-        let current_c_in = ploc_parameters.c_in[index].unwrap();
-        let current_index_cluster = self.clusters[current_c_in].unwrap();
+        let current_c_in = match ploc_parameters.c_in[index]{
+            Some(c_cin) => c_cin,
+            None => return Err(ErrorCode::AccessFailure)
+        };
+        let current_index_cluster = match self.clusters[current_c_in]{
+            Some(node) => node,
+            None => return Err(ErrorCode::AccessFailure)
+        };
         let start_index = max(0, index as i32 - ploc_parameters.search_radius as i32) as usize;
         let end_index = min(
             ploc_parameters.iteration,
@@ -234,8 +333,14 @@ impl BvhPloc {
             if j == index {
                 continue;
             }
-            let j_c_in = ploc_parameters.c_in[j].unwrap();
-            let j_index_cluster = self.clusters[j_c_in].unwrap();
+            let j_c_in = match ploc_parameters.c_in[j]{
+                Some(c_cin) => c_cin,
+                None => return Err(ErrorCode::AccessFailure)
+            };
+            let j_index_cluster = match self.clusters[j_c_in]{
+                Some(node) => node,
+                None => return Err(ErrorCode::AccessFailure)
+            };
 
             let new_aabb = Aabb::merge(
                 &current_index_cluster.bounding_box,
@@ -353,8 +458,7 @@ impl Bvh for BvhPloc {
 
         // Ploc main loop algorithm
         while ploc_parameters.iteration > 1 {
-            // Nearest Neightbor search (in parallel)
-            // TODO: implement Rayon (== Rust's OpenMP)
+            // Nearest Neightbor search
             for index in 0..ploc_parameters.iteration {
                 if let Err(err) = bvh_ploc.nearest_neighbor_search(&mut ploc_parameters, index) {
                     error!("Failed to do the nearest neighbor search phase in the ploc algorithm: {:?}", err);
@@ -362,8 +466,7 @@ impl Bvh for BvhPloc {
                 }
             }
 
-            // Merging (in parallel)
-            // TODO: implement Rayon (== Rust's OpenMP)
+            // Merging
             for index in 0..ploc_parameters.iteration {
                 if let Err(err) = bvh_ploc.merging(&mut ploc_parameters, index) {
                     error!(
@@ -374,7 +477,7 @@ impl Bvh for BvhPloc {
                 }
             }
 
-            // Prefix scan (in parallel)
+            // Prefix scan
             if let Err(err) = bvh_ploc.prefix_scan(&mut ploc_parameters) {
                 error!(
                     "Failed to do the prefix scan phase in the ploc algorithm: {:?}",
@@ -383,8 +486,7 @@ impl Bvh for BvhPloc {
                 return Err(ErrorCode::Unknown);
             }
 
-            // Compaction (in parallel)
-            // TODO: implement Rayon (== Rust's OpenMP)
+            // Compaction
             for index in 0..ploc_parameters.iteration {
                 if let Err(err) = bvh_ploc.compaction(&mut ploc_parameters, index) {
                     error!(
@@ -395,7 +497,7 @@ impl Bvh for BvhPloc {
                 }
             }
 
-            // Update (on a single thread)
+            // Update
             if let Err(err) = bvh_ploc.final_update(&mut ploc_parameters) {
                 error!(
                     "Failed to do the final update phase in the ploc algorithm: {:?}",
@@ -406,6 +508,137 @@ impl Bvh for BvhPloc {
         }
 
         // Get the bvh to send to the GPU
+        match bvh_ploc.get_bvh() {
+            Ok(bvh) => Ok(bvh),
+            Err(err) => {
+                error!(
+                    "Failed to build the final bvh structure in the ploc algorithm: {:?}",
+                    err
+                );
+                Err(ErrorCode::Unknown)
+            }
+        }
+    }
+}
+
+pub struct BvhPlocParallel;
+
+impl Bvh for BvhPlocParallel {
+    fn build(scene: &Scene) -> Result<Vec<BvhNode>, ErrorCode> {
+        let mut bvh_ploc = BvhPloc::new(scene);
+        let mut ploc_parameters = PlocParameters::new(scene)?;
+
+        // Preprocessing
+        ploc_parameters.preprocessing(&mut bvh_ploc, scene);
+        let mut iteration = ploc_parameters.iteration;
+
+        let ploc_parameters = std::sync::Mutex::new(ploc_parameters);
+        let bvh_ploc = std::sync::Mutex::new(bvh_ploc);
+
+        // Ploc main loop algorithm
+        while iteration > 1 {
+            // Nearest Neightbor search (in parallel)
+            (0..iteration).into_par_iter().try_for_each(|index| {
+                let mut bvh_ploc = match bvh_ploc.lock(){
+                    Ok(bvh) => bvh,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                let mut ploc_parameters = match ploc_parameters.lock(){
+                    Ok(param) => param,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                if let Err(err) = bvh_ploc.nearest_neighbor_search(&mut ploc_parameters, index) {
+                    error!("Failed to do the nearest neighbor search phase in the parallel ploc algorithm: {:?}", err);
+                    Err(ErrorCode::Unknown)
+                } else {
+                    Ok(())
+                }
+            })?;
+
+            // Merging (in parallel)
+            (0..iteration).into_par_iter().try_for_each(|index| {
+                let mut bvh_ploc = match bvh_ploc.lock(){
+                    Ok(bvh) => bvh,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                let mut ploc_parameters = match ploc_parameters.lock(){
+                    Ok(param) => param,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                if let Err(err) = bvh_ploc.merging(&mut ploc_parameters, index) {
+                    error!("Failed to do the merging search phase in the parallel ploc algorithm: {:?}", err);
+                    Err(ErrorCode::Unknown)
+                } else {
+                    Ok(())
+                }
+            })?;
+
+            // Prefix scan (in parallel)
+            {
+                let mut bvh_ploc = match bvh_ploc.lock(){
+                    Ok(bvh) => bvh,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                if let Err(err) = bvh_ploc.prefix_scan_parallel(&ploc_parameters) {
+                    error!(
+                        "Failed to do the prefix scan phase in the ploc algorithm: {:?}",
+                        err
+                    );
+                    return Err(ErrorCode::Unknown);
+                }
+            }
+
+            // Compaction (in parallel)
+            (0..iteration).into_par_iter().try_for_each(|index| {
+                let mut bvh_ploc = match bvh_ploc.lock(){
+                    Ok(bvh) => bvh,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                let mut ploc_parameters = match ploc_parameters.lock(){
+                    Ok(param) => param,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                if let Err(err) = bvh_ploc.compaction(&mut ploc_parameters, index) {
+                    error!(
+                        "Failed to do the compaction phase in the parallel ploc algorithm: {:?}",
+                        err
+                    );
+                    Err(ErrorCode::Unknown)
+                } else {
+                    Ok(())
+                }
+            })?;
+
+            // Update (on a single thread)
+            {
+                let mut bvh_ploc = match bvh_ploc.lock(){
+                    Ok(bvh) => bvh,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                let mut ploc_parameters = match ploc_parameters.lock(){
+                    Ok(param) => param,
+                    Err(_) => return Err(ErrorCode::AccessFailure)
+                };
+                if let Err(err) = bvh_ploc.final_update(&mut ploc_parameters) {
+                    error!(
+                        "Failed to do the final update phase in the ploc algorithm: {:?}",
+                        err
+                    );
+                    return Err(ErrorCode::Unknown);
+                }
+            }
+
+            iteration = match ploc_parameters.lock(){
+                Ok(param) => param,
+                Err(_) => return Err(ErrorCode::AccessFailure)
+            }.iteration;
+        }
+
+        // Get the bvh to send to the GPU
+        let bvh_ploc = match bvh_ploc.lock(){
+            Ok(bvh) => bvh,
+            Err(_) => return Err(ErrorCode::AccessFailure)
+        };
         match bvh_ploc.get_bvh() {
             Ok(bvh) => Ok(bvh),
             Err(err) => {
