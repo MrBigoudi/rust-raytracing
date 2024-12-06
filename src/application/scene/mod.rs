@@ -2,7 +2,7 @@ use std::{
     collections::HashMap, path::Path, time::{Duration, Instant}
 };
 
-use bvh::{default_top_down::BvhDefaultTopDown, Bvh, BvhNode, BvhType};
+use bvh::{aabb::Aabb, default_top_down::BvhDefaultTopDown, ploc::BvhPloc, Bvh, BvhNode, BvhType};
 use camera::{Camera, CameraMovement};
 use glam::Vec3;
 use log::{error, info, warn};
@@ -63,30 +63,31 @@ impl Scene {
         let mut triangles = Vec::new();
         let mut models = Vec::new();
         let mut materials = vec![Material::default()];
-        // if let Err(err) = Model::add_obj(
-        //     Path::new("suzanne.obj"),
-        //     // Path::new("teapot.obj"),
-        //     false,
-        //     &mut triangles,
-        //     &mut models,
-        //     &mut materials,
-        // ) {
-        //     error!("Failed to load a new object to the scene: {:?}", err);
-        //     return Err(ErrorCode::InitializationFailure);
-        // }
-
-        if let Err(err) = Model::add_sphere(
-            16,
-            1.,
-            glam::Vec3::ZERO,
-            None,
+        if let Err(err) = Model::add_obj(
+            // Path::new("cube.obj"),
+            Path::new("suzanne.obj"),
+            // Path::new("teapot.obj"),
+            false,
             &mut triangles,
             &mut models,
             &mut materials,
         ) {
-            error!("Failed to load a new sphere to the scene: {:?}", err);
+            error!("Failed to load a new object to the scene: {:?}", err);
             return Err(ErrorCode::InitializationFailure);
         }
+
+        // if let Err(err) = Model::add_sphere(
+        //     16,
+        //     1.,
+        //     glam::Vec3::ZERO,
+        //     None,
+        //     &mut triangles,
+        //     &mut models,
+        //     &mut materials,
+        // ) {
+        //     error!("Failed to load a new sphere to the scene: {:?}", err);
+        //     return Err(ErrorCode::InitializationFailure);
+        // }
 
         // panic!("nb tri: {:?}, nb mod: {:?}, nb mat: {:?}", triangles.len(), models.len(), materials.len());
         let bvh_type = BvhType::DefaultTopDown;
@@ -109,7 +110,7 @@ impl Scene {
         };
 
         // TODO: Init the bvhs
-        let bvhs_to_build = [BvhType::DefaultTopDown];
+        let bvhs_to_build = [BvhType::DefaultTopDown, BvhType::Ploc];
         for bvh_type in bvhs_to_build {
             let time = match scene.init_bvh(bvh_type) {
                 Ok(time) => time,
@@ -188,10 +189,27 @@ impl Scene {
                         Err(ErrorCode::Unknown)
                     }
                 }
-            }
-            BvhType::Ploc => todo!("Ploc bvh"),
+            },
+            BvhType::Ploc => {
+                let start = Instant::now();
+                match BvhPloc::build(self) {
+                    Ok(new_bvh) => {
+                        let end = Instant::now();
+                        let _ = self.bvhs.insert(BvhType::Ploc, new_bvh);
+                        Ok(end - start)
+                    }
+                    Err(err) => {
+                        error!("Failed to build the ploc bvh: {:?}", err);
+                        Err(ErrorCode::Unknown)
+                    }
+                }
+            },
             BvhType::Other => todo!("Other bvh"),
         }
+    }
+
+    pub fn get_aabb(&self) -> Result<Aabb, ErrorCode> {
+        Aabb::from_scene(&self.triangles, &self.models)
     }
 
     pub fn get_bvh(&self) -> Result<&Vec<BvhNode>, ErrorCode> {

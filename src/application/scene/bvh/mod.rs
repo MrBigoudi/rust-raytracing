@@ -8,6 +8,7 @@ use super::Scene;
 pub mod aabb;
 pub mod default_bottom_up;
 pub mod default_top_down;
+pub mod ploc;
 
 #[derive(Debug, Default, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum BvhType {

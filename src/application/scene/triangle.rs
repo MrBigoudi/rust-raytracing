@@ -1,5 +1,7 @@
 use glam::Vec4;
 
+use super::{bvh::aabb::Aabb, model::Model};
+
 #[derive(Clone, Copy, Debug)]
 #[repr(C)]
 pub struct Triangle {
@@ -32,5 +34,19 @@ impl Triangle {
         let p2 = glam::Vec3::new(p2.x, p2.y, p2.y);
 
         (0.33333) * (p0 + p1 + p2)
+    }
+
+    pub fn get_centroids(triangles: &[Triangle], models: &[Model]) -> Vec<glam::Vec3> {
+        triangles.iter().map(
+            |t| { t.get_centroid(models[t.model_index].model_matrix) }
+        ).collect::<Vec<glam::Vec3>>()
+    }
+
+    pub fn get_normalized_centroids(triangles: &[Triangle], models: &[Model], circumscribed_cube: &Aabb) -> Vec<glam::Vec3> {
+        let centroids = Self::get_centroids(triangles, models);
+        let cube_length = circumscribed_cube.get_length_x();
+        centroids.iter().map(
+            |c| {(*c - circumscribed_cube.mins) / cube_length}
+        ).collect::<Vec<glam::Vec3>>()
     }
 }

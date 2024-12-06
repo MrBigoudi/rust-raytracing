@@ -74,6 +74,49 @@ impl Aabb {
         }
     }
 
+    pub fn get_surface_area(&self) -> f32 {
+        let diffs = self.maxs - self.mins;
+        2. * (diffs.x*diffs.y + diffs.y*diffs.z + diffs.z*diffs.x)
+    }
+
+    pub fn get_circumscribed_cube(&self) -> Self {
+        let longest_axis = self.get_longest_axis();
+        let mut circumscribed_aabb = self.clone();
+        
+        let max_dist = match longest_axis {
+            AabbAxis::X => self.get_length_x(),
+            AabbAxis::Y => self.get_length_y(),
+            AabbAxis::Z => self.get_length_z(),
+        };
+        let delta = (max_dist - self.get_length_x()) * 0.5;
+        circumscribed_aabb.maxs.x += delta;
+        circumscribed_aabb.mins.x -= delta;
+        let delta = (max_dist - self.get_length_y()) * 0.5;
+        circumscribed_aabb.maxs.y += delta;
+        circumscribed_aabb.mins.y -= delta;
+        let delta = (max_dist - self.get_length_z()) * 0.5;
+        circumscribed_aabb.maxs.z += delta;
+        circumscribed_aabb.mins.z -= delta;
+        circumscribed_aabb
+    }
+
+    pub fn merge(aabb_1: &Self, aabb_2: &Self) -> Self {
+        let min_x = f32::min(aabb_1.mins.x, aabb_2.mins.x);
+        let min_y = f32::min(aabb_1.mins.y, aabb_2.mins.y);
+        let min_z = f32::min(aabb_1.mins.z, aabb_2.mins.z);
+
+        let max_x = f32::max(aabb_1.maxs.x, aabb_2.maxs.x);
+        let max_y = f32::max(aabb_1.maxs.y, aabb_2.maxs.y);
+        let max_z = f32::max(aabb_1.maxs.z, aabb_2.maxs.z);
+
+        Self{
+            mins: glam::Vec3 { x: min_x, y: min_y, z: min_z },
+            padding_1: 0.,
+            maxs: glam::Vec3 { x: max_x, y: max_y, z: max_z },
+            padding_2: 0.,
+        }
+    }
+
     pub fn from_triangle(triangle: &Triangle, model_matrix: glam::Mat4) -> Self {
         let mut aabb = Aabb::default();
         // Build the AABB in world space
