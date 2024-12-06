@@ -15,9 +15,10 @@ pub enum BvhType {
     #[default]
     None = 0,
     DefaultBottomUp = 1,
-    DefaultTopDown = 2,
-    Ploc = 3,
-    Other = 4,
+    SahGuidedBottomUp = 2,
+    DefaultTopDown = 3,
+    Ploc = 4,
+    PlocParallel = 5,
 }
 
 #[derive(Default, Clone, Copy)]

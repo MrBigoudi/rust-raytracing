@@ -76,13 +76,13 @@ impl Aabb {
 
     pub fn get_surface_area(&self) -> f32 {
         let diffs = self.maxs - self.mins;
-        2. * (diffs.x*diffs.y + diffs.y*diffs.z + diffs.z*diffs.x)
+        2. * (diffs.x * diffs.y + diffs.y * diffs.z + diffs.z * diffs.x)
     }
 
     pub fn get_circumscribed_cube(&self) -> Self {
         let longest_axis = self.get_longest_axis();
-        let mut circumscribed_aabb = self.clone();
-        
+        let mut circumscribed_aabb = *self;
+
         let max_dist = match longest_axis {
             AabbAxis::X => self.get_length_x(),
             AabbAxis::Y => self.get_length_y(),
@@ -109,10 +109,18 @@ impl Aabb {
         let max_y = f32::max(aabb_1.maxs.y, aabb_2.maxs.y);
         let max_z = f32::max(aabb_1.maxs.z, aabb_2.maxs.z);
 
-        Self{
-            mins: glam::Vec3 { x: min_x, y: min_y, z: min_z },
+        Self {
+            mins: glam::Vec3 {
+                x: min_x,
+                y: min_y,
+                z: min_z,
+            },
             padding_1: 0.,
-            maxs: glam::Vec3 { x: max_x, y: max_y, z: max_z },
+            maxs: glam::Vec3 {
+                x: max_x,
+                y: max_y,
+                z: max_z,
+            },
             padding_2: 0.,
         }
     }

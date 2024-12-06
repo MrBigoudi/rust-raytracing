@@ -9,6 +9,10 @@
 
 - GLSL option
 
-- Other BVH construction
+- BVH Default Bottom Up construction
+- BVH Ploc parallel construction
+- BVH Better Top Down construction
+
 - Load GLTF
-- Add lighting
+- Add directional light
+- Add materials

@@ -2,7 +2,10 @@ use std::cmp::{max, min};
 
 use log::error;
 
-use crate::application::{core::error::ErrorCode, scene::{triangle::Triangle, Scene}};
+use crate::application::{
+    core::error::ErrorCode,
+    scene::{triangle::Triangle, Scene},
+};
 
 use super::{aabb::Aabb, Bvh, BvhNode};
 
@@ -20,7 +23,7 @@ pub struct PlocParameters {
     nb_triangles: usize,
     pub search_radius: u32,
     pub nb_total_clusters: usize,
-    pub iteration: usize, 
+    pub iteration: usize,
     pub morton_codes: Vec<u32>,
     pub c_in: Vec<Option<usize>>,
     pub c_out: Vec<Option<usize>>,
@@ -29,22 +32,26 @@ pub struct PlocParameters {
 }
 
 fn expand_bits(value: u32) -> u32 {
+    #[allow(clippy::let_and_return)]
     let value = value.wrapping_mul(0x00010001u32) & 0xFF0000FFu32;
+    #[allow(clippy::let_and_return)]
     let value = value.wrapping_mul(0x00000101u32) & 0x0F00F00Fu32;
+    #[allow(clippy::let_and_return)]
     let value = value.wrapping_mul(0x00000011u32) & 0xC30C30C3u32;
+    #[allow(clippy::let_and_return)]
     let value = value.wrapping_mul(0x00000005u32) & 0x49249249u32;
     value
 }
 
 fn get_morton_code(point: &glam::Vec3) -> u32 {
-    let x = (point.x * 1024.0).max(0.).min(1023.0);
-    let y = (point.y * 1024.0).max(0.).min(1023.0);
-    let z = (point.z * 1024.0).max(0.).min(1023.0);
-    
+    let x = (point.x * 1024.0).clamp(0., 1023.0);
+    let y = (point.y * 1024.0).clamp(0., 1023.0);
+    let z = (point.z * 1024.0).clamp(0., 1023.0);
+
     let xx = expand_bits(x as u32);
     let yy = expand_bits(y as u32);
     let zz = expand_bits(z as u32);
-    
+
     (xx << 2) | (yy << 1) | zz
 }
 
@@ -56,11 +63,11 @@ impl BvhPloc {
     pub fn new(scene: &Scene) -> Self {
         let nb_triangles = scene.triangles.len();
         let triangle_indices = Self::get_triangle_indices(nb_triangles);
-        let clusters =  vec![None; 2*nb_triangles-1];
-        let is_leaf =  vec![false; 2*nb_triangles-1];
-        let parents =  vec![None; 2*nb_triangles-1];
-        let left_children =  vec![None; 2*nb_triangles-1];
-        let right_children =  vec![None; 2*nb_triangles-1];
+        let clusters = vec![None; 2 * nb_triangles - 1];
+        let is_leaf = vec![false; 2 * nb_triangles - 1];
+        let parents = vec![None; 2 * nb_triangles - 1];
+        let left_children = vec![None; 2 * nb_triangles - 1];
+        let right_children = vec![None; 2 * nb_triangles - 1];
         Self {
             nb_triangles,
             clusters,
@@ -72,7 +79,11 @@ impl BvhPloc {
         }
     }
 
-    fn get_bvh_node_recursive(&self, final_bvh: &mut Vec<BvhNode>, cur_node_index: usize) -> Result<(), ErrorCode> {
+    fn get_bvh_node_recursive(
+        &self,
+        final_bvh: &mut Vec<BvhNode>,
+        cur_node_index: usize,
+    ) -> Result<(), ErrorCode> {
         // TODO: update unwraps for matches error
         let cur_node = self.clusters[cur_node_index].unwrap();
         let position = final_bvh.len();
@@ -90,22 +101,27 @@ impl BvhPloc {
 
     pub fn get_bvh(&self) -> Result<Vec<BvhNode>, ErrorCode> {
         let mut final_bvh = Vec::new();
-        let root_node_index = 2*self.nb_triangles - 2;
+        let root_node_index = 2 * self.nb_triangles - 2;
         self.get_bvh_node_recursive(&mut final_bvh, root_node_index)?;
         Ok(final_bvh)
     }
 
     pub fn final_update(&mut self, ploc_parameters: &mut PlocParameters) -> Result<(), ErrorCode> {
-        if ploc_parameters.c_in[ploc_parameters.iteration-1].is_some() {
-            ploc_parameters.iteration = ploc_parameters.prefix_scan[ploc_parameters.iteration-1] + 1;
+        if ploc_parameters.c_in[ploc_parameters.iteration - 1].is_some() {
+            ploc_parameters.iteration =
+                ploc_parameters.prefix_scan[ploc_parameters.iteration - 1] + 1;
         } else {
-            ploc_parameters.iteration = ploc_parameters.prefix_scan[ploc_parameters.iteration-1];
+            ploc_parameters.iteration = ploc_parameters.prefix_scan[ploc_parameters.iteration - 1];
         }
         std::mem::swap(&mut ploc_parameters.c_in, &mut ploc_parameters.c_out);
         Ok(())
     }
 
-    pub fn compaction(&mut self, ploc_parameters: &mut PlocParameters, index: usize) -> Result<(), ErrorCode> {
+    pub fn compaction(
+        &mut self,
+        ploc_parameters: &mut PlocParameters,
+        index: usize,
+    ) -> Result<(), ErrorCode> {
         if let Some(ci) = ploc_parameters.c_in[index] {
             let new_index = ploc_parameters.prefix_scan[index];
             ploc_parameters.c_out[new_index] = Some(ci);
@@ -117,11 +133,11 @@ impl BvhPloc {
     pub fn prefix_scan(&mut self, ploc_parameters: &mut PlocParameters) -> Result<(), ErrorCode> {
         // Hillis Steele Scan
         let n = ploc_parameters.iteration;
-        
+
         // Init the output array (in parallel)
         // TODO: implement Rayon (== Rust's OpenMP)
         for i in 1..n {
-            ploc_parameters.prefix_scan[i] = if ploc_parameters.c_in[i-1].is_some(){
+            ploc_parameters.prefix_scan[i] = if ploc_parameters.c_in[i - 1].is_some() {
                 1
             } else {
                 0
@@ -133,10 +149,12 @@ impl BvhPloc {
         let mut step = 1;
         while step < n {
             // TODO: implement Rayon (== Rust's OpenMP)
+            #[allow(clippy::needless_range_loop)]
             for i in step..n {
-                temp[i] = ploc_parameters.prefix_scan[i] + ploc_parameters.prefix_scan[i-step];
+                temp[i] = ploc_parameters.prefix_scan[i] + ploc_parameters.prefix_scan[i - step];
             }
             // TODO: implement Rayon (== Rust's OpenMP)
+            #[allow(clippy::needless_range_loop)]
             for i in step..n {
                 ploc_parameters.prefix_scan[i] = temp[i];
                 temp[i] = 0;
@@ -155,7 +173,11 @@ impl BvhPloc {
         }
     }
 
-    pub fn merging(&mut self, ploc_parameters: &mut PlocParameters, index: usize) -> Result<(), ErrorCode> {
+    pub fn merging(
+        &mut self,
+        ploc_parameters: &mut PlocParameters,
+        index: usize,
+    ) -> Result<(), ErrorCode> {
         // TODO: update unwraps for matches error
         let neighbor_index = ploc_parameters.nearest_neigbor_indices[index];
         // If nearest neighbors of two clusters mutually correspond
@@ -167,8 +189,8 @@ impl BvhPloc {
                 let ci_neighbor = ploc_parameters.c_in[neighbor_index].unwrap();
 
                 // Update new clusters
-                let node = self.clusters[ci].unwrap(); 
-                let node_neighbor = self.clusters[ci_neighbor].unwrap(); 
+                let node = self.clusters[ci].unwrap();
+                let node_neighbor = self.clusters[ci_neighbor].unwrap();
                 let merged_node = Self::merge_nodes(&node, &node_neighbor);
 
                 #[allow(unused_assignments)]
@@ -193,22 +215,32 @@ impl BvhPloc {
         Ok(())
     }
 
-    pub fn nearest_neighbor_search(&mut self, ploc_parameters: &mut PlocParameters, index: usize) -> Result<(), ErrorCode> {
+    pub fn nearest_neighbor_search(
+        &mut self,
+        ploc_parameters: &mut PlocParameters,
+        index: usize,
+    ) -> Result<(), ErrorCode> {
         // TODO: update unwraps for matches error
         let current_c_in = ploc_parameters.c_in[index].unwrap();
         let current_index_cluster = self.clusters[current_c_in].unwrap();
         let start_index = max(0, index as i32 - ploc_parameters.search_radius as i32) as usize;
-        let end_index = min(ploc_parameters.iteration, 1 + index + ploc_parameters.search_radius as usize);
+        let end_index = min(
+            ploc_parameters.iteration,
+            1 + index + ploc_parameters.search_radius as usize,
+        );
 
         let mut min_dist = f32::INFINITY;
         for j in start_index..end_index {
-            if j==index {
+            if j == index {
                 continue;
             }
             let j_c_in = ploc_parameters.c_in[j].unwrap();
-            let j_index_cluster =   self.clusters[j_c_in].unwrap();
+            let j_index_cluster = self.clusters[j_c_in].unwrap();
 
-            let new_aabb = Aabb::merge(&current_index_cluster.bounding_box, &j_index_cluster.bounding_box);
+            let new_aabb = Aabb::merge(
+                &current_index_cluster.bounding_box,
+                &j_index_cluster.bounding_box,
+            );
             let cur_dist = new_aabb.get_surface_area();
 
             // Update neighbour if needed
@@ -223,22 +255,30 @@ impl BvhPloc {
 
 impl PlocParameters {
     fn get_morton_codes(scene: &Scene) -> Result<Vec<u32>, ErrorCode> {
-        let scene_aabb = match scene.get_aabb(){
+        let scene_aabb = match scene.get_aabb() {
             Ok(aabb) => aabb,
             Err(err) => {
-                error!("Failed to get the scene AABB for the ploc algorithm: {:?}", err);
+                error!(
+                    "Failed to get the scene AABB for the ploc algorithm: {:?}",
+                    err
+                );
                 return Err(ErrorCode::Unknown);
             }
         };
         let circumscribed_cube = Aabb::get_circumscribed_cube(&scene_aabb);
-        let triangles_centroids = Triangle::get_normalized_centroids(&scene.triangles, &scene.models, &circumscribed_cube);
+        let triangles_centroids = Triangle::get_normalized_centroids(
+            &scene.triangles,
+            &scene.models,
+            &circumscribed_cube,
+        );
 
-        Ok(triangles_centroids.iter().map(
-            |c| {get_morton_code(c)}
-        ).collect::<Vec<u32>>())
+        Ok(triangles_centroids
+            .iter()
+            .map(get_morton_code)
+            .collect::<Vec<u32>>())
     }
 
-    fn sort(triangle_indices: &mut Vec<usize>, morton_codes: &mut Vec<u32>){
+    fn sort(triangle_indices: &mut [usize], morton_codes: &mut [u32]) {
         // Put them in tuple
         let mut indices_codes = Vec::new();
         assert!(triangle_indices.len() == morton_codes.len());
@@ -253,7 +293,7 @@ impl PlocParameters {
         }
     }
 
-    pub fn preprocessing(&mut self, bvh_ploc: &mut BvhPloc, scene: &Scene){
+    pub fn preprocessing(&mut self, bvh_ploc: &mut BvhPloc, scene: &Scene) {
         Self::sort(&mut bvh_ploc.triangle_indices, &mut self.morton_codes);
         // Create leaf nodes
         for i in 0..self.nb_triangles {
@@ -262,7 +302,7 @@ impl PlocParameters {
             let cur_model = scene.models[cur_triangle.model_index];
 
             let bounding_box = Aabb::from_triangle(&cur_triangle, cur_model.model_matrix);
-            let leaf_cluster = BvhNode{
+            let leaf_cluster = BvhNode {
                 bounding_box,
                 triangle_index: triangle_index as u32,
                 left_child_index: 0,
@@ -316,7 +356,7 @@ impl Bvh for BvhPloc {
             // Nearest Neightbor search (in parallel)
             // TODO: implement Rayon (== Rust's OpenMP)
             for index in 0..ploc_parameters.iteration {
-                if let Err(err) = bvh_ploc.nearest_neighbor_search(&mut ploc_parameters, index){
+                if let Err(err) = bvh_ploc.nearest_neighbor_search(&mut ploc_parameters, index) {
                     error!("Failed to do the nearest neighbor search phase in the ploc algorithm: {:?}", err);
                     return Err(ErrorCode::Unknown);
                 }
@@ -325,30 +365,42 @@ impl Bvh for BvhPloc {
             // Merging (in parallel)
             // TODO: implement Rayon (== Rust's OpenMP)
             for index in 0..ploc_parameters.iteration {
-                if let Err(err) = bvh_ploc.merging(&mut ploc_parameters, index){
-                    error!("Failed to do the merging phase in the ploc algorithm: {:?}", err);
+                if let Err(err) = bvh_ploc.merging(&mut ploc_parameters, index) {
+                    error!(
+                        "Failed to do the merging phase in the ploc algorithm: {:?}",
+                        err
+                    );
                     return Err(ErrorCode::Unknown);
                 }
             }
 
             // Prefix scan (in parallel)
-            if let Err(err) = bvh_ploc.prefix_scan(&mut ploc_parameters){
-                error!("Failed to do the prefix scan phase in the ploc algorithm: {:?}", err);
+            if let Err(err) = bvh_ploc.prefix_scan(&mut ploc_parameters) {
+                error!(
+                    "Failed to do the prefix scan phase in the ploc algorithm: {:?}",
+                    err
+                );
                 return Err(ErrorCode::Unknown);
             }
 
             // Compaction (in parallel)
             // TODO: implement Rayon (== Rust's OpenMP)
             for index in 0..ploc_parameters.iteration {
-                if let Err(err) = bvh_ploc.compaction(&mut ploc_parameters, index){
-                    error!("Failed to do the compaction phase in the ploc algorithm: {:?}", err);
+                if let Err(err) = bvh_ploc.compaction(&mut ploc_parameters, index) {
+                    error!(
+                        "Failed to do the compaction phase in the ploc algorithm: {:?}",
+                        err
+                    );
                     return Err(ErrorCode::Unknown);
                 }
             }
 
             // Update (on a single thread)
-            if let Err(err) = bvh_ploc.final_update(&mut ploc_parameters){
-                error!("Failed to do the final update phase in the ploc algorithm: {:?}", err);
+            if let Err(err) = bvh_ploc.final_update(&mut ploc_parameters) {
+                error!(
+                    "Failed to do the final update phase in the ploc algorithm: {:?}",
+                    err
+                );
                 return Err(ErrorCode::Unknown);
             }
         }
@@ -357,9 +409,12 @@ impl Bvh for BvhPloc {
         match bvh_ploc.get_bvh() {
             Ok(bvh) => Ok(bvh),
             Err(err) => {
-                error!("Failed to build the final bvh structure in the ploc algorithm: {:?}", err);
+                error!(
+                    "Failed to build the final bvh structure in the ploc algorithm: {:?}",
+                    err
+                );
                 Err(ErrorCode::Unknown)
-            },
+            }
         }
     }
 }

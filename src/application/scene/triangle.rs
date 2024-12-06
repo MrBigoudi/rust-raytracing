@@ -37,16 +37,22 @@ impl Triangle {
     }
 
     pub fn get_centroids(triangles: &[Triangle], models: &[Model]) -> Vec<glam::Vec3> {
-        triangles.iter().map(
-            |t| { t.get_centroid(models[t.model_index].model_matrix) }
-        ).collect::<Vec<glam::Vec3>>()
+        triangles
+            .iter()
+            .map(|t| t.get_centroid(models[t.model_index].model_matrix))
+            .collect::<Vec<glam::Vec3>>()
     }
 
-    pub fn get_normalized_centroids(triangles: &[Triangle], models: &[Model], circumscribed_cube: &Aabb) -> Vec<glam::Vec3> {
+    pub fn get_normalized_centroids(
+        triangles: &[Triangle],
+        models: &[Model],
+        circumscribed_cube: &Aabb,
+    ) -> Vec<glam::Vec3> {
         let centroids = Self::get_centroids(triangles, models);
         let cube_length = circumscribed_cube.get_length_x();
-        centroids.iter().map(
-            |c| {(*c - circumscribed_cube.mins) / cube_length}
-        ).collect::<Vec<glam::Vec3>>()
+        centroids
+            .iter()
+            .map(|c| (*c - circumscribed_cube.mins) / cube_length)
+            .collect::<Vec<glam::Vec3>>()
     }
 }

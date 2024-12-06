@@ -229,11 +229,7 @@ impl VulkanContext<'_> {
                     BvhType::DefaultTopDown,
                 );
                 ui.same_line();
-                ui.radio_button(
-                    "Ploc",
-                    &mut scene.bvh_type,
-                    BvhType::Ploc,
-                );
+                ui.radio_button("Ploc", &mut scene.bvh_type, BvhType::Ploc);
                 // TODO: add other bvh types
                 ui.new_line();
                 ui.checkbox("Display Bvh", &mut scene.should_display_bvh);

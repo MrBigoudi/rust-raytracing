@@ -1,5 +1,7 @@
 use std::{
-    collections::HashMap, path::Path, time::{Duration, Instant}
+    collections::HashMap,
+    path::Path,
+    time::{Duration, Instant},
 };
 
 use bvh::{aabb::Aabb, default_top_down::BvhDefaultTopDown, ploc::BvhPloc, Bvh, BvhNode, BvhType};
@@ -175,7 +177,6 @@ impl Scene {
                 warn!("No bvh need to be build...");
                 Ok(Duration::default())
             }
-            BvhType::DefaultBottomUp => todo!("Bottom up bvh"),
             BvhType::DefaultTopDown => {
                 let start = Instant::now();
                 match BvhDefaultTopDown::build(self) {
@@ -189,7 +190,7 @@ impl Scene {
                         Err(ErrorCode::Unknown)
                     }
                 }
-            },
+            }
             BvhType::Ploc => {
                 let start = Instant::now();
                 match BvhPloc::build(self) {
@@ -203,8 +204,11 @@ impl Scene {
                         Err(ErrorCode::Unknown)
                     }
                 }
-            },
-            BvhType::Other => todo!("Other bvh"),
+            }
+            _ => {
+                error!("Tried to build an unkwnown BVH");
+                Err(ErrorCode::Unknown)
+            }
         }
     }
 
