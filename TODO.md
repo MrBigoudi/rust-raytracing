@@ -5,7 +5,7 @@
 - Validation error: Immediate submit buffer destruction (maybe ImGui error ?)
 - Weird buffer for the teapot ?
 - Inverted normals/axis ?
-- Fix the parallel version of PLOC
+- Weird hole at top of spheres ?
 
 ## To add
 

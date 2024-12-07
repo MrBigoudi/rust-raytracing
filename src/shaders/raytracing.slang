@@ -124,10 +124,10 @@ void main(uint3 thread_id: SV_DispatchThreadID) {
     float4 color = bvh_color;
     get_color(closest_hit, color, _Triangles, _Models, _Materials, (_PushConstants.is_wireframe_on != 0));
 
-    // // Alpha blending assuming there is no transparent material in the scene
-    // let alpha = bvh_color.w;
-    // color = alpha * bvh_color + (1 - alpha) * color;
-    // color.w = 1.f;
+    // Alpha blending assuming there is no transparent material in the scene
+    let alpha = bvh_color.w;
+    color = alpha * bvh_color + (1 - alpha) * color;
+    color.w = 1.f;
 
     _Framebuffer[texel_coord] = color;
 }

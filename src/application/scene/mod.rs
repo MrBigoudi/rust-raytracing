@@ -7,7 +7,8 @@ use std::{
 use bvh::{
     aabb::Aabb,
     default_top_down::BvhDefaultTopDown,
-    ploc::{BvhPloc, BvhPlocParallel},
+    ploc::BvhPloc,
+    ploc_parallel::BvhPlocParallel,
     Bvh, BvhNode, BvhType,
 };
 use camera::{Camera, CameraMovement};
@@ -73,8 +74,8 @@ impl Scene {
         let mut models = Vec::new();
         let mut materials = vec![Material::default()];
         // if let Err(err) = Model::add_obj(
-        //     // Path::new("cube.obj"),
-        //     Path::new("suzanne.obj"),
+        //     Path::new("cube.obj"),
+        //     // Path::new("suzanne.obj"),
         //     // Path::new("teapot.obj"),
         //     false,
         //     &mut triangles,
@@ -141,7 +142,7 @@ impl Scene {
         let bvhs_to_build = [
             // BvhType::DefaultTopDown,
             BvhType::Ploc,
-            // BvhType::PlocParallel,
+            BvhType::PlocParallel,
         ];
         for bvh_type in bvhs_to_build {
             let time = match scene.init_bvh(bvh_type) {

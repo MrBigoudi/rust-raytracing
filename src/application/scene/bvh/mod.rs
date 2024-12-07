@@ -9,6 +9,7 @@ pub mod aabb;
 pub mod default_bottom_up;
 pub mod default_top_down;
 pub mod ploc;
+pub mod ploc_parallel;
 
 #[derive(Debug, Default, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum BvhType {
@@ -35,12 +36,12 @@ pub struct BvhNode {
 
 impl Debug for BvhNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BvhNode")
-            .field("bounding_box", &self.bounding_box)
-            .field("triangle_index", &self.triangle_index)
-            .field("left_child_index", &self.left_child_index)
-            .field("right_child_index", &self.right_child_index)
-            .finish()
+        writeln!(f)?;
+        writeln!(f, "bounding_box: {:?}", self.bounding_box)?;
+        writeln!(f, "triangle_index: {}", self.triangle_index)?;
+        writeln!(f, "left_child_index: {}", self.left_child_index)?;
+        writeln!(f, "right_child_index: {}", self.right_child_index)?;
+        Ok(())
     }
 }
 
