@@ -11,6 +11,43 @@ public struct Hit {
     public func get_distance()->float {
         return coords.w;
     }
+
+    public func get_barycentric_coordinates()->float3 {
+        return float3(coords.x, coords.y, coords.z);
+    }
+
+    public func get_world_position(
+        triangles: RWStructuredBuffer<Triangle>,
+        models: RWStructuredBuffer<Model>,
+    ) ->float3 {
+        let triangle = triangles[triangle_index];
+        let b = get_barycentric_coordinates();
+        let model_position = (b.x * triangle.p0) + (b.y * triangle.p1) + (b.z * triangle.p2);
+        return mul(models[triangle.model_index].model_matrix, model_position).xyz;
+    }
+
+    public func get_world_norm(
+        triangles: RWStructuredBuffer<Triangle>,
+        models: RWStructuredBuffer<Model>,
+    ) ->float3 {
+        let triangle = triangles[triangle_index];
+        let n = triangle.get_normal(models);
+
+        let b = get_barycentric_coordinates();
+
+        return normalize((b.x * n.x) + (b.y * n.y) + (b.z * n.z));
+    }
+
+    public func get_ambient(
+        triangles: RWStructuredBuffer<Triangle>,
+        models: RWStructuredBuffer<Model>,
+        materials: RWStructuredBuffer<Material>,
+    ) ->float3 {
+        let b = get_barycentric_coordinates();
+        let material = materials[models[triangles[triangle_index].model_index].material_index];
+        let ambient = float3(material.ambient.x, material.ambient.y, material.ambient.z);
+        return (b.x * ambient) + (b.y * ambient) + (b.z * ambient);
+    }
 };
 
 public func ray_triangle_intersection(
@@ -33,7 +70,7 @@ public func ray_triangle_intersection(
     float3 w = ray.direction.xyz;
     float3 o = ray.origin.xyz;
 
-    float3 tmp = cross(e1, e0);
+    float3 tmp = cross(e0, e1);
     if (length(tmp) == 0.f) {
         hit.did_hit = 0;
         return hit;
@@ -43,11 +80,11 @@ public func ray_triangle_intersection(
     float3 q = cross(w, e1);
     float a = dot(e0, q);
 
-    if (dot(n, w) <= 0.) {
+    if(!ray.is_shadow_ray && dot(n, w) >= 0.) {
         hit.did_hit = 0;
         return hit;
     }
-    float epsilon = 1e-4;
+    float epsilon = 1e-3;
     if (abs(a) < epsilon) {
         hit.did_hit = 0;
         return hit;
@@ -65,14 +102,14 @@ public func ray_triangle_intersection(
     }
 
     float t = dot(e1, r);
-    if (t < 1e-3 || t > 1e6) {
+    if (t < 1e-5 || t > 1e6) {
         hit.did_hit = 0;
         return hit;
     }
 
-    hit.coords.x = b2;
-    hit.coords.y = b0;
-    hit.coords.z = b1;
+    hit.coords.x = b0;
+    hit.coords.y = b1;
+    hit.coords.z = b2;
     hit.coords.w = t;
     hit.did_hit = 1;
     hit.triangle_index = triangle_index;
@@ -147,7 +184,7 @@ public func get_closest_hit_bvh(
     // Create a stack for the node indices
     // At most, the stack size is the number of entries in the bvh
     // const uint STACK_SIZE = 2*nb_triangles - 1;
-    const uint STACK_SIZE = 8192;
+    const uint STACK_SIZE = 4096;
     uint stack[STACK_SIZE];
     uint depth_stack[STACK_SIZE];
     uint stack_index = 0;
@@ -187,6 +224,9 @@ public func get_closest_hit_bvh(
                 if (cur_hit.did_hit == 0) continue;
                 if (closest_hit.did_hit == 0 || cur_hit.get_distance() < closest_hit.get_distance()) {
                     closest_hit = cur_hit;
+                    if (ray.is_shadow_ray) {
+                        return;
+                    }
                 }
             } else {
                 // Push the children onto the stack
@@ -203,6 +243,10 @@ public func get_closest_hit_bvh(
 }
 
 public func get_color(
+    light: DirectionalLight,
+    bvh: RWStructuredBuffer<BvhNode>,
+    bvh_type: uint,
+    nb_triangles: uint,
     hit: Hit,
     inout color: float4,
     triangles: RWStructuredBuffer<Triangle>,
@@ -211,13 +255,26 @@ public func get_color(
     is_wireframe_on: bool,
     ){
     if(hit.did_hit == 0) return;
-    Triangle hit_triangle = triangles[hit.triangle_index];
-    color = materials[models[hit_triangle.model_index].material_index].ambient;
-    // color = float4(0., dot(hit_triangle.get_normal(models), float3(1.,0.,0.)), 0., 1.);
-    // color = float4(0., hit_triangle.p0.y, 0., 1.);
-    // color = float4(hit_triangle.get_normal(models), 1.);
 
-    // Wireframe color
+    let color_tmp = light.shade(
+        hit,
+        BRDF::Lambert,
+        triangles,
+        models,
+        materials,
+        bvh,
+        bvh_type,
+        nb_triangles,
+    );
+    color = float4(color_tmp, 1.);
+
+    // // TODO: to remove
+    // let hit_triangle = triangles[hit.triangle_index];
+    // color = float4(hit_triangle.get_normal(models), 1.);
+    // Triangle hit_triangle = triangles[hit.triangle_index];
+    // color = materials[models[hit_triangle.model_index].material_index].ambient;
+
+        // Wireframe color
     if (is_wireframe_on) {
         // Check distance to edges
         float wireframe_edges_width = 0.02;

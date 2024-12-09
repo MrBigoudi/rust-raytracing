@@ -74,8 +74,8 @@ impl Scene {
         let mut models = Vec::new();
         let mut materials = vec![Material::default()];
         // if let Err(err) = Model::add_obj(
-        //     Path::new("cube.obj"),
-        //     // Path::new("suzanne.obj"),
+        //     // Path::new("cube.obj"),
+        //     Path::new("suzanne.obj"),
         //     // Path::new("teapot.obj"),
         //     false,
         //     &mut triangles,
@@ -86,8 +86,8 @@ impl Scene {
         //     return Err(ErrorCode::InitializationFailure);
         // }
 
-        let nb_spheres = 20;
-        let sphere_resolution = 128;
+        let nb_spheres = 10;
+        let sphere_resolution = 64;
         let min_pos = -50.;
         let max_pos = 50.;
         let min_radius = 0.5;

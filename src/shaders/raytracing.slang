@@ -121,8 +121,20 @@ void main(uint3 thread_id: SV_DispatchThreadID) {
         );
     }
 
-    float4 color = bvh_color;
-    get_color(closest_hit, color, _Triangles, _Models, _Materials, (_PushConstants.is_wireframe_on != 0));
+    DirectionalLight sun;
+    float4 color = float4(0.);
+    get_color(
+        sun, 
+        _Bvhs,
+        _PushConstants.bvh_type,
+        _PushConstants.nb_triangles,
+        closest_hit,
+        color,
+        _Triangles, 
+        _Models, 
+        _Materials, 
+        (_PushConstants.is_wireframe_on != 0)
+    );
 
     // Alpha blending assuming there is no transparent material in the scene
     let alpha = bvh_color.w;

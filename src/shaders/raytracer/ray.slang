@@ -3,6 +3,7 @@ implementing raytracer;
 public struct Ray {
     public float4 origin;
     public float4 direction;
+    public bool is_shadow_ray;
 };
 
 public func get_ray(pos: float2, camera: Camera) -> Ray { // pos between 0 and 1
@@ -14,5 +15,6 @@ public func get_ray(pos: float2, camera: Camera) -> Ray { // pos between 0 and 1
     ray.origin = camera.eye;
     ray.direction = normalize(pos_world_space - ray.origin);
     ray.direction.w = 0.;
+    ray.is_shadow_ray = false;
     return ray;
 }
