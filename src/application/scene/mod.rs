@@ -87,7 +87,7 @@ impl Scene {
         // }
 
         let nb_spheres = 10;
-        let sphere_resolution = 64;
+        let sphere_resolution = 128;
         let min_pos = -50.;
         let max_pos = 50.;
         let min_radius = 0.5;

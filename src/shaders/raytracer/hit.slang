@@ -184,7 +184,7 @@ public func get_closest_hit_bvh(
     // Create a stack for the node indices
     // At most, the stack size is the number of entries in the bvh
     // const uint STACK_SIZE = 2*nb_triangles - 1;
-    const uint STACK_SIZE = 4096;
+    const uint STACK_SIZE = 2048;
     uint stack[STACK_SIZE];
     uint depth_stack[STACK_SIZE];
     uint stack_index = 0;

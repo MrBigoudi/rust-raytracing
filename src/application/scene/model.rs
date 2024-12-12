@@ -307,6 +307,7 @@ impl Model {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
 
+        // TODO: Fix spheres vertices
         // Build the vertices
         for i in 0..=resolution {
             let phi = (i as f32) * step_phi;

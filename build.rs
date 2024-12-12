@@ -6,7 +6,6 @@ fn main() {
     // Specify the list of shaders and their entry points
     let shaders = vec![
         ("src/shaders/raytracing.slang", "main"),
-        ("src/shaders/test.slang", "main"),
     ];
 
     // Define the base output directory
@@ -23,7 +22,7 @@ fn main() {
             create_dir_all(parent).unwrap();
         }
 
-        let status = Command::new("slangc")
+        let (status, is_glslc) = match Command::new("slangc")
             .arg(shader)
             .arg("-emit-spirv-directly")
             .arg("-g2")
@@ -35,10 +34,44 @@ fn main() {
             .arg(&output_path)
             .arg("-entry")
             .arg(entry_point)
-            .status()
-            .unwrap();
+            .status() {
+            Ok(status) => (status, false),
+            Err(_) => {
+                // TODO: use glslc code to generate spirv
+                let glsl_path = shader_path.join(".glsl");
+                let glslc_status = Command::new("glslc")
+                    .arg(glsl_path)
+                    .arg("-o")
+                    .arg(&output_path)
+                    .status()
+                    .unwrap()
+                ;
+                (glslc_status, true)
+            }
+        };
 
-        if !status.success() {
+        if status.success() && !is_glslc {
+            // Recompile the glsl version
+            let glsl_path = shader_path.with_extension("glsl");
+            let status = Command::new("slangc")
+                .arg(shader)
+                .arg("-emit-spirv-directly")
+                .arg("-g2")
+                .arg("-profile")
+                .arg("glsl_460")
+                .arg("-target")
+                .arg("glsl")
+                .arg("-o")
+                .arg(&glsl_path)
+                .arg("-entry")
+                .arg(entry_point)
+                .status()
+                .unwrap()
+            ;
+            if !status.success() {
+                panic!("Shader compilation to glsl failed for {}", shader);
+            }
+        } else {
             panic!("Shader compilation failed for {}", shader);
         }
     }

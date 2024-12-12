@@ -5,7 +5,7 @@
 This project relies on the following:
 - [The vulkan SDK and the validation layers](https://www.lunarg.com/vulkan-sdk/) 
 - [The rust programming language](https://www.rust-lang.org/)
-- [The slang programming language and the $slangc$ compiler](https://shader-slang.com/)
+- [The slang programming language and the `slangc` compiler](https://shader-slang.com/) (if the `slangc` compiler is not available, the shaders will be built using `glslc` and the automatically built `glsl` shaders from the `slangc` compiler)
 
 ## HOWTO
 
