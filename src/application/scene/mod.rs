@@ -73,50 +73,51 @@ impl Scene {
         let mut triangles = Vec::new();
         let mut models = Vec::new();
         let mut materials = vec![Material::default()];
-        // if let Err(err) = Model::add_obj(
-        //     // Path::new("cube.obj"),
-        //     Path::new("suzanne.obj"),
-        //     // Path::new("teapot.obj"),
-        //     false,
-        //     &mut triangles,
-        //     &mut models,
-        //     &mut materials,
-        // ) {
-        //     error!("Failed to load a new object to the scene: {:?}", err);
-        //     return Err(ErrorCode::InitializationFailure);
-        // }
-
-        let nb_spheres = 100;
-        let sphere_resolution = 128;
-        let min_pos = -50.;
-        let max_pos = 50.;
-        let min_radius = 0.5;
-        let max_radius = 5.;
-        for i in 0..nb_spheres {
-            let mut rng = rand::thread_rng();
-            let radius = rng.gen::<f32>() * (max_radius-min_radius) + min_radius;
-            let material = Material::random();
-            let center = glam::Vec3::new(
-                rng.gen::<f32>() * (max_pos-min_pos) + min_pos,
-                rng.gen::<f32>() * (max_pos-min_pos) + min_pos,
-                rng.gen::<f32>() * (max_pos-min_pos) + min_pos,
-            );
-
-            if let Err(err) = Model::add_sphere(
-                sphere_resolution,
-                radius,
-                center,
-                Some(material),
-                &mut triangles,
-                &mut models,
-                &mut materials,
-            ) {
-                error!("Failed to load a new sphere to the scene: {:?}", err);
-                return Err(ErrorCode::InitializationFailure);
-            }
-
-            info!("Number of triangles after sphere number {}: {}", i, triangles.len());
+        if let Err(err) = Model::add_obj(
+            // Path::new("cube.obj"),
+            // Path::new("suzanne.obj"),
+            // Path::new("teapot.obj"),
+            Path::new("xyzrgb_dragon.obj"),
+            false,
+            &mut triangles,
+            &mut models,
+            &mut materials,
+        ) {
+            error!("Failed to load a new object to the scene: {:?}", err);
+            return Err(ErrorCode::InitializationFailure);
         }
+
+        // let nb_spheres = 100;
+        // let sphere_resolution = 128;
+        // let min_pos = -50.;
+        // let max_pos = 50.;
+        // let min_radius = 0.5;
+        // let max_radius = 5.;
+        // for i in 0..nb_spheres {
+        //     let mut rng = rand::thread_rng();
+        //     let radius = rng.gen::<f32>() * (max_radius-min_radius) + min_radius;
+        //     let material = Material::random();
+        //     let center = glam::Vec3::new(
+        //         rng.gen::<f32>() * (max_pos-min_pos) + min_pos,
+        //         rng.gen::<f32>() * (max_pos-min_pos) + min_pos,
+        //         rng.gen::<f32>() * (max_pos-min_pos) + min_pos,
+        //     );
+
+        //     if let Err(err) = Model::add_sphere(
+        //         sphere_resolution,
+        //         radius,
+        //         center,
+        //         Some(material),
+        //         &mut triangles,
+        //         &mut models,
+        //         &mut materials,
+        //     ) {
+        //         error!("Failed to load a new sphere to the scene: {:?}", err);
+        //         return Err(ErrorCode::InitializationFailure);
+        //     }
+
+        //     info!("Number of triangles after sphere number {}: {}", i, triangles.len());
+        // }
 
         // panic!("nb tri: {:?}, nb mod: {:?}, nb mat: {:?}", triangles.len(), models.len(), materials.len());
         let bvh_type = BvhType::Ploc;

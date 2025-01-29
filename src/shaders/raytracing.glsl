@@ -910,14 +910,14 @@ void get_closest_hit_bvh_0(Ray_0 _S53, inout Hit_0 _S54, inout vec4 _S55, bool _
 {
 
 #line 195
-    uint  stack_0[32];
+    uint  stack_0[64];
 
 
 
     stack_0[0U] = 0U;
 
 #line 196
-    uint  depth_stack_0[32];
+    uint  depth_stack_0[64];
 
 
 

@@ -69,6 +69,8 @@ impl Model {
         in_out_models.append(&mut new_models);
         in_out_materials.append(&mut new_materials);
 
+        info!("Number of triangles after adding a new object: {}", in_out_triangles.len());
+
         Ok(())
     }
 
@@ -375,6 +377,8 @@ impl Model {
         }
 
         in_out_models.push(sphere_model);
+
+        info!("Number of triangles after adding a new sphere: {}", in_out_triangles.len());
 
         Ok(())
     }
