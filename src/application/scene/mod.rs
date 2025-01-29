@@ -86,7 +86,7 @@ impl Scene {
         //     return Err(ErrorCode::InitializationFailure);
         // }
 
-        let nb_spheres = 10;
+        let nb_spheres = 100;
         let sphere_resolution = 128;
         let min_pos = -50.;
         let max_pos = 50.;

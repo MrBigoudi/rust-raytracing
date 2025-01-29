@@ -1,6 +1,6 @@
 implementing raytracer;
 
-import scene.scene; 
+import scene.scene;
 
 
 public struct Hit {
@@ -19,11 +19,14 @@ public struct Hit {
     public func get_world_position(
         triangles: RWStructuredBuffer<Triangle>,
         models: RWStructuredBuffer<Model>,
-    ) ->float3 {
+    ) -> float3 {
         let triangle = triangles[triangle_index];
         let b = get_barycentric_coordinates();
-        let model_position = (b.x * triangle.p0) + (b.y * triangle.p1) + (b.z * triangle.p2);
-        return mul(models[triangle.model_index].model_matrix, model_position).xyz;
+        float3 p0_world = triangle.get_world_position_p0(models);
+        float3 p1_world = triangle.get_world_position_p1(models);
+        float3 p2_world = triangle.get_world_position_p2(models);
+
+        return (b.x * p0_world) + (b.y * p1_world) + (b.z * p2_world);
     }
 
     public func get_world_norm(
@@ -31,11 +34,11 @@ public struct Hit {
         models: RWStructuredBuffer<Model>,
     ) ->float3 {
         let triangle = triangles[triangle_index];
+        // No vertex normals
         let n = triangle.get_normal(models);
 
         let b = get_barycentric_coordinates();
-
-        return normalize((b.x * n.x) + (b.y * n.y) + (b.z * n.z));
+        return normalize((b.x * n) + (b.y * n) + (b.z * n));
     }
 
     public func get_ambient(
@@ -60,9 +63,9 @@ public func ray_triangle_intersection(
 
     Triangle triangle = triangles[triangle_index];
 
-    float3 p0 = mul(models[triangle.model_index].model_matrix, triangle.p0).xyz;
-    float3 p1 = mul(models[triangle.model_index].model_matrix, triangle.p1).xyz;
-    float3 p2 = mul(models[triangle.model_index].model_matrix, triangle.p2).xyz;
+    float3 p0 = triangle.get_world_position_p0(models);
+    float3 p1 = triangle.get_world_position_p1(models);
+    float3 p2 = triangle.get_world_position_p2(models);
 
     float3 e0 = p1 - p0;
     float3 e1 = p2 - p0;
@@ -71,7 +74,7 @@ public func ray_triangle_intersection(
     float3 o = ray.origin.xyz;
 
     float3 tmp = cross(e0, e1);
-    if (length(tmp) == 0.f) {
+    if (length(tmp) == 0.) {
         hit.did_hit = 0;
         return hit;
     }
@@ -84,7 +87,8 @@ public func ray_triangle_intersection(
         hit.did_hit = 0;
         return hit;
     }
-    float epsilon = 1e-3;
+
+    float epsilon = 1e-6;
     if (abs(a) < epsilon) {
         hit.did_hit = 0;
         return hit;
@@ -102,14 +106,14 @@ public func ray_triangle_intersection(
     }
 
     float t = dot(e1, r);
-    if (t < 1e-5 || t > 1e6) {
+    if (t < 1e-4 || t > 1e6) {
         hit.did_hit = 0;
         return hit;
     }
 
-    hit.coords.x = b0;
-    hit.coords.y = b1;
-    hit.coords.z = b2;
+    hit.coords.x = b2;
+    hit.coords.y = b0;
+    hit.coords.z = b1;
     hit.coords.w = t;
     hit.did_hit = 1;
     hit.triangle_index = triangle_index;
@@ -142,11 +146,11 @@ public func ray_bvh_intersection(ray: Ray, bvh_node: BvhNode) -> BvhNodeIntersec
     // TODO: Check if border
     float threshold = 0.05;
     float3 hit_point = ray.origin.xyz + ray.direction.xyz * t_min;
-    bool close_to_x = (abs(hit_point.x - bvh_node.bounding_box.mins.x) < threshold) 
+    bool close_to_x = (abs(hit_point.x - bvh_node.bounding_box.mins.x) < threshold)
             || (abs(hit_point.x - bvh_node.bounding_box.maxs.x) < threshold);
-    bool close_to_y = (abs(hit_point.y - bvh_node.bounding_box.mins.y) < threshold) 
+    bool close_to_y = (abs(hit_point.y - bvh_node.bounding_box.mins.y) < threshold)
             || (abs(hit_point.y - bvh_node.bounding_box.maxs.y) < threshold);
-    bool close_to_z = (abs(hit_point.z - bvh_node.bounding_box.mins.z) < threshold) 
+    bool close_to_z = (abs(hit_point.z - bvh_node.bounding_box.mins.z) < threshold)
             || (abs(hit_point.z - bvh_node.bounding_box.maxs.z) < threshold);
     if ((close_to_x && close_to_y) || (close_to_x && close_to_z) || (close_to_y && close_to_z)) {
         return BvhNodeIntersection::Edge;
@@ -166,6 +170,9 @@ public func get_closest_hit(
         if(cur_hit.did_hit == 0) continue;
         if(closest_hit.did_hit == 0 || cur_hit.get_distance() < closest_hit.get_distance()){
             closest_hit = cur_hit;
+            if (ray.is_shadow_ray) {
+                return;
+            }
         }
     }
 }
@@ -184,7 +191,7 @@ public func get_closest_hit_bvh(
     // Create a stack for the node indices
     // At most, the stack size is the number of entries in the bvh
     // const uint STACK_SIZE = 2*nb_triangles - 1;
-    const uint STACK_SIZE = 2048;
+    const uint STACK_SIZE = 64;
     uint stack[STACK_SIZE];
     uint depth_stack[STACK_SIZE];
     uint stack_index = 0;

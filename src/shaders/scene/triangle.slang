@@ -8,17 +8,17 @@ public struct Triangle {
 
     public func get_world_position_p0(models: RWStructuredBuffer<Model>)->float3 {
         let p0 = mul(models[model_index].model_matrix, p0);
-        return p0.xyz / p0.w;
+        return p0.xyz;
     }
 
     public func get_world_position_p1(models: RWStructuredBuffer<Model>)->float3 {
         let p1 = mul(models[model_index].model_matrix, p1);
-        return p1.xyz / p1.w;
+        return p1.xyz;
     }
 
     public func get_world_position_p2(models: RWStructuredBuffer<Model>)->float3 {
         let p2 = mul(models[model_index].model_matrix, p2);
-        return p2.xyz / p2.w;
+        return p2.xyz;
     }
 
     public func get_normal(models: RWStructuredBuffer<Model>) -> float3 {
