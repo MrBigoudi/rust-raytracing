@@ -45,6 +45,7 @@ pub struct RaytracingPushConstant {
     pub bvh_type: u32,
     pub should_display_bvh: u32,
     pub bvh_depth_to_display: u32,
+    pub time: f32,
 }
 
 impl RaytracingPipeline {
@@ -607,6 +608,7 @@ impl ComputePipeline for RaytracingPipeline {
             bvh_type: scene.bvh_last_type as u32,
             should_display_bvh: scene.should_display_bvh as u32,
             bvh_depth_to_display: scene.bvh_depth_to_display,
+            time: scene.current_time,
         };
         unsafe {
             device.cmd_push_constants(

@@ -38,7 +38,7 @@ layout(std140) uniform _S1
     float plane_near_0;
 }_Camera_0;
 
-#line 74
+#line 75
 struct PushConstant_std140_0
 {
     uint nb_triangles_0;
@@ -46,10 +46,11 @@ struct PushConstant_std140_0
     uint bvh_type_0;
     uint should_display_bvh_0;
     uint bvh_depth_to_display_0;
+    float current_time_0;
 };
 
 
-#line 78
+#line 79
 layout(push_constant)
 layout(std140) uniform _S2
 {
@@ -58,6 +59,7 @@ layout(std140) uniform _S2
     uint bvh_type_0;
     uint should_display_bvh_0;
     uint bvh_depth_to_display_0;
+    float current_time_0;
 }_PushConstants_0;
 
 #line 7 2
@@ -1319,87 +1321,87 @@ void get_color_0(DirectionalLight_0 _S92, uint _S93, uint _S94, Hit_0 _S95, inou
 }
 
 
-#line 95 0
+#line 96 0
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 void main()
 {
 
-#line 96
+#line 97
     uvec2 texel_coord_0 = gl_GlobalInvocationID.xy;
 
     const uvec2 _S100 = uvec2(0U, 0U);
 
-#line 98
+#line 99
     uvec2 image_size_0 = _S100;
     ((image_size_0[0]) = imageSize((_Framebuffer_0)).x), ((image_size_0[1]) = imageSize((_Framebuffer_0)).y);
 
     const vec2 _S101 = vec2(0.0);
 
-#line 101
+#line 102
     vec2 pixel_position_0 = _S101;
     float _S102 = float(texel_coord_0.x) / float(image_size_0.x);
 
-#line 102
+#line 103
     pixel_position_0[0] = _S102;
     float _S103 = float(texel_coord_0.y) / float(image_size_0.y);
 
-#line 103
+#line 104
     pixel_position_0[1] = _S103;
     bool _S104;
 
-#line 104
+#line 105
     if(pixel_position_0.x >= 1.0)
     {
 
-#line 104
+#line 105
         _S104 = true;
 
-#line 104
+#line 105
     }
     else
     {
 
-#line 104
+#line 105
         _S104 = pixel_position_0.x < 0.0;
 
-#line 104
+#line 105
     }
     if(_S104)
     {
 
-#line 105
+#line 106
         _S104 = true;
 
-#line 105
+#line 106
     }
     else
     {
 
-#line 105
+#line 106
         _S104 = pixel_position_0.y >= 1.0;
 
-#line 105
+#line 106
     }
 
-#line 105
+#line 106
     if(_S104)
     {
 
-#line 105
+#line 106
         _S104 = true;
 
-#line 105
+#line 106
     }
     else
     {
 
-#line 105
+#line 106
         _S104 = pixel_position_0.y < 0.0;
 
-#line 105
+#line 106
     }
 
-#line 104
+#line 105
     if(_S104)
     {
         return;
@@ -1410,41 +1412,53 @@ void main()
 
     const vec4 _S106 = vec4(0.0, 0.0, 0.0, 0.0);
 
-#line 112
+#line 113
     vec4 bvh_color_1 = _S106;
     Hit_0 closest_hit_1;
     closest_hit_1.did_hit_0 = 0U;
     if(int(_PushConstants_0.bvh_type_0) == 0)
     {
 
-#line 116
+#line 117
         get_closest_hit_0(_S105, _PushConstants_0.nb_triangles_0, closest_hit_1);
 
-#line 115
+#line 116
     }
     else
     {
         bool should_display_bvh_1 = _PushConstants_0.should_display_bvh_0 != 0U;
         get_closest_hit_bvh_0(_S105, closest_hit_1, bvh_color_1, should_display_bvh_1, _PushConstants_0.bvh_depth_to_display_0);
 
-#line 115
+#line 116
     }
 
-#line 125
-    DirectionalLight_0 sun_0 = DirectionalLight_x24init_0();
-    const vec4 _S107 = vec4(0.0);
+#line 126
+    DirectionalLight_0 _S107 = DirectionalLight_x24init_0();
 
 #line 126
-    vec4 color_1 = _S107;
+    DirectionalLight_0 sun_0 = _S107;
 
+
+
+    float sun_angle_xz_0 = _PushConstants_0.current_time_0 * 0.00100000004749745;
+    float sun_angle_y_0 = _PushConstants_0.current_time_0 * 0.00033333335886709;
+    vec3 _S108 = normalize(vec3(cos(sun_angle_xz_0), sin(sun_angle_y_0), sin(sun_angle_xz_0)));
+
+#line 132
+    sun_0.direction_1 = _S108;
+
+    const vec4 _S109 = vec4(0.0);
+
+#line 134
+    vec4 color_1 = _S109;
     get_color_0(sun_0, _PushConstants_0.bvh_type_0, _PushConstants_0.nb_triangles_0, closest_hit_1, color_1, _PushConstants_0.is_wireframe_on_0 != 0U);
 
-#line 142
-    float _S108 = bvh_color_1.w;
-    vec4 _S109 = _S108 * bvh_color_1 + (1.0 - _S108) * color_1;
+#line 149
+    float _S110 = bvh_color_1.w;
+    vec4 _S111 = _S110 * bvh_color_1 + (1.0 - _S110) * color_1;
 
-#line 143
-    color_1 = _S109;
+#line 150
+    color_1 = _S111;
     color_1[3] = 1.0;
 
     imageStore((_Framebuffer_0), (ivec2(texel_coord_0)), color_1);

@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     path::PathBuf,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use bvh::{
@@ -41,6 +41,8 @@ pub struct Scene {
     pub materials: Vec<Material>,
     pub camera: Camera,
     pub is_wireframe_on: bool,
+    pub start_time: u128,
+    pub current_time: f32,
 
     // Bvhs
     pub bvh_type: BvhType,
@@ -63,25 +65,35 @@ impl Scene {
         models: Vec<Model>,
         materials: Vec<Material>,
         camera: Camera,
-    ) -> Scene {
+    ) -> Result<Scene, ErrorCode> {
         let bvh_type = BvhType::default();
         let mut bvhs: HashMap<BvhType, Vec<BvhNode>> = Default::default();
         let _ = bvhs.insert(BvhType::default(), Vec::new());
         let bvhs_build_times: HashMap<BvhType, Duration> = Default::default();
 
-        Scene {
+        let start_time = match SystemTime::now().duration_since(UNIX_EPOCH) {
+            Ok(time) => time.as_millis(),
+            Err(err) => {
+                error!("Failed to get the current time: {:?}", err);
+                return Err(ErrorCode::AccessFailure);
+            }
+        };
+
+        Ok(Scene {
             triangles,
             models,
             materials,
             camera,
             is_wireframe_on: false,
+            start_time,
+            current_time: 0.,
             bvh_type,
             bvh_last_type: bvh_type,
             bvhs,
             bvhs_build_times,
             should_display_bvh: false,
             bvh_depth_to_display: 0,
-        }
+        })
     }
 
     // Scene with only one centered sphere
@@ -122,9 +134,9 @@ impl Scene {
             return Err(ErrorCode::InitializationFailure);
         }
 
-        Ok(Self::init_scene_skeleton(
+        Self::init_scene_skeleton(
             triangles, models, materials, camera,
-        ))
+        )
     }
 
     fn init_scene_objs(
@@ -135,7 +147,7 @@ impl Scene {
         let height = parameters.window_height as f32;
         let aspect_ratio = width / height;
         let camera = Camera::new(
-            Vec3::new(0., 0., -200.),
+            Vec3::new(0., 0., -400.),
             aspect_ratio,
             50.,
             0.1,
@@ -163,9 +175,9 @@ impl Scene {
             }
         }
 
-        Ok(Self::init_scene_skeleton(
+        Self::init_scene_skeleton(
             triangles, models, materials, camera,
-        ))
+        )
     }
 
     fn init_scene_multi_spheres(
@@ -216,9 +228,9 @@ impl Scene {
             }
         }
 
-        Ok(Self::init_scene_skeleton(
+        Self::init_scene_skeleton(
             triangles, models, materials, camera,
-        ))
+        )
     }
 
     fn from_scene_type(
@@ -279,23 +291,60 @@ impl Scene {
 
         #[allow(unused)]
         let multi_objs = {
+            let mut objs = Vec::new();
             let armadillo = (PathBuf::from("armadillo.obj"), glam::Mat4::IDENTITY);
-            let bunny = (PathBuf::from("stanford-bunny.obj"), glam::Mat4::IDENTITY);
-            let suzanne = (PathBuf::from("suzanne.obj"), glam::Mat4::IDENTITY);
-            let teapot = (PathBuf::from("teapot.obj"), glam::Mat4::IDENTITY);
+            objs.push(armadillo);
+
+            let num_objects = 10;
+            let radius = 150.;
+
+            for i in 0..num_objects {
+                let angle = (i as f32 / num_objects as f32) * std::f32::consts::TAU;
+                let x = radius * angle.cos();
+                let z = radius * angle.sin();
+                
+                // Bunny circle at height 100
+                let bunny_height = 100.0;
+                let bunny_translation = glam::Mat4::from_translation(glam::Vec3::new(x, bunny_height, z));
+                let bunny_rotation = glam::Mat4::from_rotation_y(-angle);
+                let bunny_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(100.));
+                let bunny_model_matrix = bunny_translation * bunny_rotation * bunny_scale_factor;
+                let bunny = (PathBuf::from("stanford-bunny.obj"), bunny_model_matrix);
+                objs.push(bunny);
+        
+                // Suzanne circle at height 0
+                let suzanne_height = 0.0;
+                let suzanne_translation = glam::Mat4::from_translation(glam::Vec3::new(x, suzanne_height, z));
+                let suzanne_rotation = glam::Mat4::from_rotation_y(-angle);
+                let suzanne_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(10.));
+                let suzanne_model_matrix = suzanne_translation * suzanne_rotation * suzanne_scale_factor;
+                let suzanne = (PathBuf::from("suzanne.obj"), suzanne_model_matrix);
+                objs.push(suzanne);
+        
+                // Teapot circle at height -100
+                let teapot_height = -100.0;
+                let teapot_translation = glam::Mat4::from_translation(glam::Vec3::new(x, teapot_height, z));
+                let teapot_rotation = glam::Mat4::from_rotation_y(-angle);
+                let teapot_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(10.));
+                let teapot_model_matrix = teapot_translation * teapot_rotation * teapot_scale_factor;
+                let teapot = (PathBuf::from("teapot.obj"), teapot_model_matrix);
+                objs.push(teapot);
+            }
+            
             let dragon = (
                 PathBuf::from("xyzrgb_dragon.obj"), 
                 glam::Mat4::from_translation(
-                    glam::Vec3::new(-50., -10., 0.)
+                    glam::Vec3::new(-50., -100., 0.)
                 )
             );
-            SceneType::MultipleObj(vec![armadillo, bunny, suzanne, teapot, dragon])
+            objs.push(dragon);
+            SceneType::MultipleObj(objs)
         };
 
         // TODO: uncomment to select the scene
-        let mut scene = Self::from_scene_type(parameters, single_sphere)?;
+        // let mut scene = Self::from_scene_type(parameters, single_sphere)?;
         // let mut scene = Self::from_scene_type(parameters, multi_spheres)?;
-        // let mut scene = Self::from_scene_type(parameters, multi_objs)?;
+        let mut scene = Self::from_scene_type(parameters, multi_objs)?;
 
         // TODO: uncomment to select the bvh type to build
         let bvhs_to_build = [
@@ -335,6 +384,16 @@ impl Scene {
         delta_time: f64,
         keys: &HashMap<Key, KeyState>,
     ) -> Result<(), ErrorCode> {
+        // Update current time
+        let now = match SystemTime::now().duration_since(UNIX_EPOCH) {
+            Ok(time) => time.as_millis(),
+            Err(err) => {
+                error!("Failed to get the current time: {:?}", err);
+                return Err(ErrorCode::AccessFailure);
+            }
+        };
+        self.current_time = (now - self.start_time) as f32;
+
         // Move the camera
         if keys.contains_key(&Key::W) && (keys.get(&Key::W).unwrap() == &KeyState::Pressed) {
             self.camera

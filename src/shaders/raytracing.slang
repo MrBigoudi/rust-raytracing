@@ -72,6 +72,7 @@ struct PushConstant {
     uint bvh_type;
     uint should_display_bvh;
     uint bvh_depth_to_display;
+    float current_time;
 }
 
 [[vk::push_constant]]
@@ -123,8 +124,14 @@ void main(uint3 thread_id: SV_DispatchThreadID) {
 
     // Adjust light direction
     DirectionalLight sun;
+    // Orbit arround center
+    float sun_speed_xz = 0.001f;
+    float sun_speed_y = sun_speed_xz / 3.f;
+    float sun_angle_xz = _PushConstants.current_time * sun_speed_xz;
+    float sun_angle_y = _PushConstants.current_time * sun_speed_y;
+    sun.direction = normalize(float3(cos(sun_angle_xz), sin(sun_angle_y), sin(sun_angle_xz)));
+    
     float4 color = float4(0.);
-
     get_color(
         sun, 
         _Bvhs,
