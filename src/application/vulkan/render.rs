@@ -112,10 +112,7 @@ impl VulkanContext<'_> {
         pipelines: &mut Pipelines,
         scene: &Scene,
     ) -> Result<(), ErrorCode> {
-        // TODO: use the correct pipeline
-        // pipelines.test_pipeline.run(self, scene)?;
-        pipelines.raytracing_pipeline.run(self, scene)?;
-        Ok(())
+        pipelines.raytracing_pipeline.run(self, scene)
     }
 
     fn prepare_rendering_commands(

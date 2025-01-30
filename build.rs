@@ -4,9 +4,7 @@ use std::process::Command;
 
 fn main() {
     // Specify the list of shaders and their entry points
-    let shaders = vec![
-        ("src/shaders/raytracing.slang", "main"),
-    ];
+    let shaders = vec![("src/shaders/raytracing.slang", "main")];
 
     // Define the base output directory
     let out_dir = Path::new("target/shaders");
@@ -34,18 +32,17 @@ fn main() {
             .arg(&output_path)
             .arg("-entry")
             .arg(entry_point)
-            .status() {
+            .status()
+        {
             Ok(status) => (status, false),
             Err(_) => {
-                // TODO: use glslc code to generate spirv
                 let glsl_path = shader_path.join(".glsl");
                 let glslc_status = Command::new("glslc")
                     .arg(glsl_path)
                     .arg("-o")
                     .arg(&output_path)
                     .status()
-                    .unwrap()
-                ;
+                    .unwrap();
                 (glslc_status, true)
             }
         };
@@ -66,8 +63,7 @@ fn main() {
                 .arg("-entry")
                 .arg(entry_point)
                 .status()
-                .unwrap()
-            ;
+                .unwrap();
             if !status.success() {
                 panic!("Shader compilation to glsl failed for {}", shader);
             }

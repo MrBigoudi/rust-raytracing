@@ -1,4 +1,7 @@
-use std::{cmp::{max, min}, sync::Mutex};
+use std::{
+    cmp::{max, min},
+    sync::Mutex,
+};
 
 use rayon::prelude::*;
 
@@ -6,7 +9,10 @@ use log::error;
 
 use crate::application::{
     core::error::ErrorCode,
-    scene::{bvh::ploc::{BvhPloc, PlocParameters}, Scene},
+    scene::{
+        bvh::ploc::{BvhPloc, PlocParameters},
+        Scene,
+    },
 };
 
 use super::{aabb::Aabb, Bvh, BvhNode};
@@ -47,32 +53,31 @@ fn nearest_neighbor_search(
     clusters: &[Option<BvhNode>],
     mut_nearest_neighbor_index: &mut usize,
 ) -> Result<(), ErrorCode> {
-    let current_c_in = match c_in[index]{
+    let current_c_in = match c_in[index] {
         Some(c_cin) => c_cin,
-        None => return Err(ErrorCode::AccessFailure)
+        None => return Err(ErrorCode::AccessFailure),
     };
-    let current_index_cluster = match clusters[current_c_in]{
+    let current_index_cluster = match clusters[current_c_in] {
         Some(node) => node,
-        None => return Err(ErrorCode::AccessFailure)
+        None => return Err(ErrorCode::AccessFailure),
     };
     let start_index = max(0, index as i32 - search_radius as i32) as usize;
-    let end_index = min(
-        iteration,
-        1 + index + search_radius as usize,
-    );
+    let end_index = min(iteration, 1 + index + search_radius as usize);
 
     let mut min_dist = f32::INFINITY;
+
+    #[allow(clippy::needless_range_loop)]
     for j in start_index..end_index {
         if j == index {
             continue;
         }
-        let j_c_in = match c_in[j]{
+        let j_c_in = match c_in[j] {
             Some(c_cin) => c_cin,
-            None => return Err(ErrorCode::AccessFailure)
+            None => return Err(ErrorCode::AccessFailure),
         };
-        let j_index_cluster = match clusters[j_c_in]{
+        let j_index_cluster = match clusters[j_c_in] {
             Some(node) => node,
-            None => return Err(ErrorCode::AccessFailure)
+            None => return Err(ErrorCode::AccessFailure),
         };
 
         let new_aabb = Aabb::merge(
@@ -90,6 +95,7 @@ fn nearest_neighbor_search(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn merging(
     index: usize,
     nb_total_clusters: &Mutex<&mut usize>,
@@ -106,28 +112,28 @@ fn merging(
         // To avoid conflicts, only meging on the lower index
         if index < neighbor_index {
             // For global clusters arrays
-            let ci = match mut_c_in.lock().unwrap()[index]{
+            let ci = match mut_c_in.lock().unwrap()[index] {
                 Some(c_cin) => c_cin,
-                None => return Err(ErrorCode::AccessFailure)
+                None => return Err(ErrorCode::AccessFailure),
             };
-            let ci_neighbor = match mut_c_in.lock().unwrap()[neighbor_index]{
+            let ci_neighbor = match mut_c_in.lock().unwrap()[neighbor_index] {
                 Some(c_cin) => c_cin,
-                None => return Err(ErrorCode::AccessFailure)
+                None => return Err(ErrorCode::AccessFailure),
             };
 
             // Update new clusters
-            let node = match mut_clusters.lock().unwrap()[ci]{
+            let node = match mut_clusters.lock().unwrap()[ci] {
                 Some(node) => node,
-                None => return Err(ErrorCode::AccessFailure)
+                None => return Err(ErrorCode::AccessFailure),
             };
-            let node_neighbor = match mut_clusters.lock().unwrap()[ci_neighbor]{
+            let node_neighbor = match mut_clusters.lock().unwrap()[ci_neighbor] {
                 Some(node) => node,
-                None => return Err(ErrorCode::AccessFailure)
+                None => return Err(ErrorCode::AccessFailure),
             };
             let merged_node = BvhPloc::merge_nodes(&node, &node_neighbor);
 
             let mut nb_clusters = nb_total_clusters.lock().unwrap();
-            let new_cluster_index: usize = nb_clusters.clone();
+            let new_cluster_index: usize = **nb_clusters;
             **nb_clusters += 1;
 
             mut_clusters.lock().unwrap()[new_cluster_index] = Some(merged_node);
@@ -144,41 +150,29 @@ fn merging(
     Ok(())
 }
 
-fn prefix_scan_parallel(
-    iteration: usize,
-    c_in: &[Option<usize>],
-    prefix_scan: &mut [usize],
-) {
-    (
-        (1..iteration),
-        &mut prefix_scan[1..iteration]
-    ).into_par_iter()
-        .for_each(|(index, prefix)|{
-            *prefix = if c_in[index-1].is_some() { 1 } else { 0 };
-        }
-    );
+fn prefix_scan_parallel(iteration: usize, c_in: &[Option<usize>], prefix_scan: &mut [usize]) {
+    ((1..iteration), &mut prefix_scan[1..iteration])
+        .into_par_iter()
+        .for_each(|(index, prefix)| {
+            *prefix = if c_in[index - 1].is_some() { 1 } else { 0 };
+        });
 
     let mut temp = vec![0; iteration];
     let mut step = 1;
     while step < iteration {
-        (
-            (step..iteration),
-            &mut temp[step..iteration]
-        ).into_par_iter()
-            .for_each(|(index, temp)|{
-                *temp = prefix_scan[index] + prefix_scan[index-step]
-            }
-        );
+        ((step..iteration), &mut temp[step..iteration])
+            .into_par_iter()
+            .for_each(|(index, temp)| *temp = prefix_scan[index] + prefix_scan[index - step]);
 
         (
             &mut temp[step..iteration],
-            &mut prefix_scan[step..iteration]
-        ).into_par_iter()
-            .for_each(|(temp, prefix)|{
-                *prefix = temp.clone();
+            &mut prefix_scan[step..iteration],
+        )
+            .into_par_iter()
+            .for_each(|(temp, prefix)| {
+                *prefix = *temp;
                 *temp = 0;
-            }
-        );
+            });
         step *= 2;
     }
 }
@@ -204,25 +198,39 @@ fn get_bvh_node_recursive(
     right_children: &[Option<usize>],
     is_leaf: &[bool],
 ) -> Result<(), ErrorCode> {
-    let cur_node = match clusters[cur_node_index]{
+    let cur_node = match clusters[cur_node_index] {
         Some(cur_node) => cur_node,
-        None => return Err(ErrorCode::AccessFailure)
+        None => return Err(ErrorCode::AccessFailure),
     };
     let position = final_bvh.len();
     final_bvh.push(cur_node);
     if !is_leaf[cur_node_index] {
-        let left_child = match left_children[cur_node_index]{
+        let left_child = match left_children[cur_node_index] {
             Some(child) => child,
-            None => return Err(ErrorCode::AccessFailure)
+            None => return Err(ErrorCode::AccessFailure),
         };
         final_bvh[position].left_child_index = final_bvh.len() as u32;
-        get_bvh_node_recursive(final_bvh, left_child, clusters, left_children, right_children, is_leaf)?;
-        let right_child = match right_children[cur_node_index]{
+        get_bvh_node_recursive(
+            final_bvh,
+            left_child,
+            clusters,
+            left_children,
+            right_children,
+            is_leaf,
+        )?;
+        let right_child = match right_children[cur_node_index] {
             Some(child) => child,
-            None => return Err(ErrorCode::AccessFailure)
+            None => return Err(ErrorCode::AccessFailure),
         };
         final_bvh[position].right_child_index = final_bvh.len() as u32;
-        get_bvh_node_recursive(final_bvh, right_child, clusters, left_children,right_children, is_leaf)?;
+        get_bvh_node_recursive(
+            final_bvh,
+            right_child,
+            clusters,
+            left_children,
+            right_children,
+            is_leaf,
+        )?;
     }
     Ok(())
 }
@@ -236,7 +244,14 @@ fn get_bvh(
 ) -> Result<Vec<BvhNode>, ErrorCode> {
     let mut final_bvh = Vec::new();
     let root_node_index = 2 * nb_triangles - 2;
-    get_bvh_node_recursive(&mut final_bvh, root_node_index, clusters, left_children, right_children, is_leaf)?;
+    get_bvh_node_recursive(
+        &mut final_bvh,
+        root_node_index,
+        clusters,
+        left_children,
+        right_children,
+        is_leaf,
+    )?;
     Ok(final_bvh)
 }
 
@@ -270,12 +285,12 @@ impl Bvh for BvhPlocParallel {
             (0..nb_triangles),
             &mut clusters[0..nb_triangles],
             &mut is_leaf[0..nb_triangles],
-            &mut c_in
-        ).into_par_iter()
-            .for_each(|(index, cluster, is_leaf, c_in)|{
+            &mut c_in,
+        )
+            .into_par_iter()
+            .for_each(|(index, cluster, is_leaf, c_in)| {
                 create_leaf_nodes(index, scene, &triangle_indices, cluster, is_leaf, c_in);
-            }
-        );
+            });
 
         while iteration > 1 {
             // Nearest neighbor search (in parallel)
@@ -299,28 +314,26 @@ impl Bvh for BvhPlocParallel {
             let mutex_parents = Mutex::new(&mut parents);
             let mutex_c_in = Mutex::new(&mut c_in);
             let mutex_nb_total_clusters = Mutex::new(&mut nb_total_clusters);
-            
-            (0..iteration)
-                .into_par_iter()
-                .try_for_each(|index|{
-                    if let Err(err) = 
-                        merging(
-                            index,
-                            &mutex_nb_total_clusters,
-                            &nearest_neighbor_indices,
-                            &mutex_clusters,
-                            &mutex_left_children,
-                            &mutex_right_children,
-                            &mutex_parents,
-                            &mutex_c_in
-                        )
-                    {
-                        error!("Failed to do the merging phase in the parallel ploc algorithm: {:?}", err);
-                        return Err(ErrorCode::Unknown);
-                    };
-                    Ok(())
-                }
-            )?;
+
+            (0..iteration).into_par_iter().try_for_each(|index| {
+                if let Err(err) = merging(
+                    index,
+                    &mutex_nb_total_clusters,
+                    &nearest_neighbor_indices,
+                    &mutex_clusters,
+                    &mutex_left_children,
+                    &mutex_right_children,
+                    &mutex_parents,
+                    &mutex_c_in,
+                ) {
+                    error!(
+                        "Failed to do the merging phase in the parallel ploc algorithm: {:?}",
+                        err
+                    );
+                    return Err(ErrorCode::Unknown);
+                };
+                Ok(())
+            })?;
 
             // Prefix Scan (in parallel)
             prefix_scan_parallel(iteration, &c_in, &mut prefix_scan);
@@ -332,10 +345,10 @@ impl Bvh for BvhPlocParallel {
             });
 
             // Final update (in one thread)
-            if c_in[iteration-1].is_some(){
-                iteration = prefix_scan[iteration-1]+1;
+            if c_in[iteration - 1].is_some() {
+                iteration = prefix_scan[iteration - 1] + 1;
             } else {
-                iteration = prefix_scan[iteration-1];
+                iteration = prefix_scan[iteration - 1];
             }
             std::mem::swap(&mut c_in, &mut c_out);
         }
@@ -346,7 +359,7 @@ impl Bvh for BvhPlocParallel {
             &clusters,
             &left_children,
             &right_children,
-            &is_leaf
+            &is_leaf,
         ) {
             Ok(bvh) => Ok(bvh),
             Err(err) => {

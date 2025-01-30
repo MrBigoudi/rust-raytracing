@@ -143,7 +143,7 @@ public func ray_bvh_intersection(ray: Ray, bvh_node: BvhNode) -> BvhNodeIntersec
         return BvhNodeIntersection::None;
     }
 
-    // TODO: Check if border
+    // Check if border
     float threshold = 0.05;
     float3 hit_point = ray.origin.xyz + ray.direction.xyz * t_min;
     bool close_to_x = (abs(hit_point.x - bvh_node.bounding_box.mins.x) < threshold)
@@ -275,13 +275,7 @@ public func get_color(
     );
     color = float4(color_tmp, 1.);
 
-    // // TODO: to remove
-    // let hit_triangle = triangles[hit.triangle_index];
-    // color = float4(hit_triangle.get_normal(models), 1.);
-    // Triangle hit_triangle = triangles[hit.triangle_index];
-    // color = materials[models[hit_triangle.model_index].material_index].ambient;
-
-        // Wireframe color
+    // Wireframe color
     if (is_wireframe_on) {
         // Check distance to edges
         float wireframe_edges_width = 0.02;

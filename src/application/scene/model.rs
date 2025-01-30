@@ -33,6 +33,7 @@ impl Model {
     pub fn add_obj(
         object_file_name: &Path,
         has_material_file: bool,
+        model_matrix: Option<Mat4>,
         in_out_triangles: &mut Vec<Triangle>,
         in_out_models: &mut Vec<Model>,
         in_out_materials: &mut Vec<Material>,
@@ -57,10 +58,15 @@ impl Model {
         for new_triangle in &mut new_triangles {
             new_triangle.model_index += new_model_first_idx;
         }
+        
         for new_model in &mut new_models {
             // Be careful about default material at index = 0
             if new_model.material_index > 0 {
                 new_model.material_index += new_materials_first_idx - 1;
+            }
+            // Add a custom model matrix
+            if let Some(model_matrix) = model_matrix {
+                new_model.model_matrix = model_matrix;
             }
         }
 
@@ -69,7 +75,10 @@ impl Model {
         in_out_models.append(&mut new_models);
         in_out_materials.append(&mut new_materials);
 
-        info!("Number of triangles after adding a new object: {}", in_out_triangles.len());
+        info!(
+            "Number of triangles after adding a new object: {}",
+            in_out_triangles.len()
+        );
 
         Ok(())
     }
@@ -309,7 +318,6 @@ impl Model {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
 
-        // TODO: Fix spheres vertices
         // Build the vertices
         for i in 0..=resolution {
             let phi = (i as f32) * step_phi;
@@ -378,7 +386,10 @@ impl Model {
 
         in_out_models.push(sphere_model);
 
-        info!("Number of triangles after adding a new sphere: {}", in_out_triangles.len());
+        info!(
+            "Number of triangles after adding a new sphere: {}",
+            in_out_triangles.len()
+        );
 
         Ok(())
     }

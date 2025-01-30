@@ -15,9 +15,11 @@ pub mod ploc_parallel;
 pub enum BvhType {
     #[default]
     None = 0,
-    DefaultBottomUp = 1,
-    SahGuidedBottomUp = 2,
-    DefaultTopDown = 3,
+    DefaultTopDown = 1,
+    // TODO: default bottom up construction
+    DefaultBottomUp = 2,
+    // TODO: sah guided construction
+    SahGuidedTopDown = 3,
     Ploc = 4,
     PlocParallel = 5,
 }

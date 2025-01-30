@@ -1,5 +1,3 @@
-use std::ffi::CStr;
-
 use ash::vk::{
     PhysicalDeviceFeatures, PhysicalDeviceVulkan12Features, PhysicalDeviceVulkan13Features,
 };
@@ -31,8 +29,7 @@ impl Default for DeviceRequirements<'_> {
             .synchronization2(true)
             .dynamic_rendering(true);
 
-        let required_extensions =
-            vec![unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_KHR_swapchain\0").as_ptr() }];
+        let required_extensions = vec![c"VK_KHR_swapchain".as_ptr()];
 
         Self {
             does_require_graphics_queue: true,

@@ -121,8 +121,10 @@ void main(uint3 thread_id: SV_DispatchThreadID) {
         );
     }
 
+    // Adjust light direction
     DirectionalLight sun;
     float4 color = float4(0.);
+
     get_color(
         sun, 
         _Bvhs,

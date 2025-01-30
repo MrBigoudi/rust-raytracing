@@ -1263,7 +1263,7 @@ void get_color_0(DirectionalLight_0 _S92, uint _S93, uint _S94, Hit_0 _S95, inou
 #line 276
     _S96 = vec4(_S98, 1.0);
 
-#line 285
+
     if(_S97)
     {
 
@@ -1272,49 +1272,49 @@ void get_color_0(DirectionalLight_0 _S92, uint _S93, uint _S94, Hit_0 _S95, inou
         if(_S95.coords_0.x < 0.01999999955296516)
         {
 
-#line 290
+#line 284
             _S99 = true;
 
-#line 290
+#line 284
         }
         else
         {
 
-#line 290
+#line 284
             _S99 = _S95.coords_0.y < 0.01999999955296516;
 
-#line 290
+#line 284
         }
         if(_S99)
         {
 
-#line 291
+#line 285
             _S99 = true;
 
-#line 291
+#line 285
         }
         else
         {
 
-#line 291
+#line 285
             _S99 = _S95.coords_0.z < 0.01999999955296516;
 
-#line 291
+#line 285
         }
 
-#line 289
+#line 283
         if(_S99)
         {
 
             _S96 = wireframe_edges_color_0;
 
-#line 289
+#line 283
         }
 
-#line 285
+#line 279
     }
 
-#line 295
+#line 289
     return;
 }
 
@@ -1430,19 +1430,20 @@ void main()
 #line 115
     }
 
-#line 124
+#line 125
     DirectionalLight_0 sun_0 = DirectionalLight_x24init_0();
     const vec4 _S107 = vec4(0.0);
 
-#line 125
+#line 126
     vec4 color_1 = _S107;
+
     get_color_0(sun_0, _PushConstants_0.bvh_type_0, _PushConstants_0.nb_triangles_0, closest_hit_1, color_1, _PushConstants_0.is_wireframe_on_0 != 0U);
 
-#line 140
+#line 142
     float _S108 = bvh_color_1.w;
     vec4 _S109 = _S108 * bvh_color_1 + (1.0 - _S108) * color_1;
 
-#line 141
+#line 143
     color_1 = _S109;
     color_1[3] = 1.0;
 

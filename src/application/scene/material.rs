@@ -1,4 +1,4 @@
-use glam::Vec4;
+use glam::{Vec3, Vec4};
 use rand::Rng;
 
 #[derive(Clone, Copy, Debug)]
@@ -23,8 +23,11 @@ impl Material {
         let b = rng.gen();
 
         let ambient = Vec4::new(r, g, b, 1.);
-        Self {
-            ambient,
-        }
+        Self { ambient }
+    }
+
+    pub fn uniform(color: &Vec3) -> Self {
+        let ambient = Vec4::new(color.x, color.y, color.z, 1.);
+        Self { ambient }
     }
 }

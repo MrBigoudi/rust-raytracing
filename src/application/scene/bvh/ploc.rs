@@ -86,22 +86,22 @@ impl BvhPloc {
         final_bvh: &mut Vec<BvhNode>,
         cur_node_index: usize,
     ) -> Result<(), ErrorCode> {
-        let cur_node = match self.clusters[cur_node_index]{
+        let cur_node = match self.clusters[cur_node_index] {
             Some(cur_node) => cur_node,
-            None => return Err(ErrorCode::AccessFailure)
+            None => return Err(ErrorCode::AccessFailure),
         };
         let position = final_bvh.len();
         final_bvh.push(cur_node);
         if !self.is_leaf[cur_node_index] {
-            let left_child = match self.left_children[cur_node_index]{
+            let left_child = match self.left_children[cur_node_index] {
                 Some(child) => child,
-                None => return Err(ErrorCode::AccessFailure)
+                None => return Err(ErrorCode::AccessFailure),
             };
             final_bvh[position].left_child_index = final_bvh.len() as u32;
             self.get_bvh_node_recursive(final_bvh, left_child)?;
-            let right_child = match self.right_children[cur_node_index]{
+            let right_child = match self.right_children[cur_node_index] {
                 Some(child) => child,
-                None => return Err(ErrorCode::AccessFailure)
+                None => return Err(ErrorCode::AccessFailure),
             };
             final_bvh[position].right_child_index = final_bvh.len() as u32;
             self.get_bvh_node_recursive(final_bvh, right_child)?;
@@ -191,23 +191,23 @@ impl BvhPloc {
             // To avoid conflicts, only meging on the lower index
             if index < neighbor_index {
                 // For global clusters arrays
-                let ci = match ploc_parameters.c_in[index]{
+                let ci = match ploc_parameters.c_in[index] {
                     Some(c_cin) => c_cin,
-                    None => return Err(ErrorCode::AccessFailure)
+                    None => return Err(ErrorCode::AccessFailure),
                 };
-                let ci_neighbor = match ploc_parameters.c_in[neighbor_index]{
+                let ci_neighbor = match ploc_parameters.c_in[neighbor_index] {
                     Some(c_cin) => c_cin,
-                    None => return Err(ErrorCode::AccessFailure)
+                    None => return Err(ErrorCode::AccessFailure),
                 };
 
                 // Update new clusters
-                let node = match self.clusters[ci]{
+                let node = match self.clusters[ci] {
                     Some(node) => node,
-                    None => return Err(ErrorCode::AccessFailure)
+                    None => return Err(ErrorCode::AccessFailure),
                 };
-                let node_neighbor = match self.clusters[ci_neighbor]{
+                let node_neighbor = match self.clusters[ci_neighbor] {
                     Some(node) => node,
-                    None => return Err(ErrorCode::AccessFailure)
+                    None => return Err(ErrorCode::AccessFailure),
                 };
                 let merged_node = Self::merge_nodes(&node, &node_neighbor);
 
@@ -233,13 +233,13 @@ impl BvhPloc {
         ploc_parameters: &mut PlocParameters,
         index: usize,
     ) -> Result<(), ErrorCode> {
-        let current_c_in = match ploc_parameters.c_in[index]{
+        let current_c_in = match ploc_parameters.c_in[index] {
             Some(c_cin) => c_cin,
-            None => return Err(ErrorCode::AccessFailure)
+            None => return Err(ErrorCode::AccessFailure),
         };
-        let current_index_cluster = match self.clusters[current_c_in]{
+        let current_index_cluster = match self.clusters[current_c_in] {
             Some(node) => node,
-            None => return Err(ErrorCode::AccessFailure)
+            None => return Err(ErrorCode::AccessFailure),
         };
         let start_index = max(0, index as i32 - ploc_parameters.search_radius as i32) as usize;
         let end_index = min(
@@ -252,13 +252,13 @@ impl BvhPloc {
             if j == index {
                 continue;
             }
-            let j_c_in = match ploc_parameters.c_in[j]{
+            let j_c_in = match ploc_parameters.c_in[j] {
                 Some(c_cin) => c_cin,
-                None => return Err(ErrorCode::AccessFailure)
+                None => return Err(ErrorCode::AccessFailure),
             };
-            let j_index_cluster = match self.clusters[j_c_in]{
+            let j_index_cluster = match self.clusters[j_c_in] {
                 Some(node) => node,
-                None => return Err(ErrorCode::AccessFailure)
+                None => return Err(ErrorCode::AccessFailure),
             };
 
             let new_aabb = Aabb::merge(
@@ -276,8 +276,6 @@ impl BvhPloc {
         Ok(())
     }
 }
-
-
 
 impl PlocParameters {
     pub fn get_morton_codes(scene: &Scene) -> Result<Vec<u32>, ErrorCode> {

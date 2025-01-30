@@ -1,14 +1,11 @@
 use std::{
     collections::HashMap,
-    path::Path,
+    path::PathBuf,
     time::{Duration, Instant},
 };
 
 use bvh::{
-    aabb::Aabb,
-    default_top_down::BvhDefaultTopDown,
-    ploc::BvhPloc,
-    ploc_parallel::BvhPlocParallel,
+    aabb::Aabb, default_top_down::BvhDefaultTopDown, ploc::BvhPloc, ploc_parallel::BvhPlocParallel,
     Bvh, BvhNode, BvhType,
 };
 use camera::{Camera, CameraMovement};
@@ -54,78 +51,25 @@ pub struct Scene {
     pub bvh_depth_to_display: u32,
 }
 
+pub enum SceneType {
+    SingleSphere(u32, glam::Vec3, f32, glam::Vec3), // (resolution, position, radius, color)
+    MultipleSphere(u16, u32, f32, f32, f32, f32), // (nb_spheres, resolution, min_position, max_position, min_radius, max_radius)
+    MultipleObj(Vec<(PathBuf, glam::Mat4)>),      // ((path to the obj file, model_matrix))
+}
+
 impl Scene {
-    // TODO: Change the initial scene
-    pub fn init(parameters: &ApplicationParameters) -> Result<Scene, ErrorCode> {
-        let width = parameters.window_width as f32;
-        let height = parameters.window_height as f32;
-        let aspect_ratio = width / height;
-        // error!("aspect ratio: {:?}, width: {:?}, height: {:?}", aspect_ratio, width, height);
-        let camera = Camera::new(
-            // Vec3::new(0., 0., -5.),
-            Vec3::new(0., 0., -40.),
-            aspect_ratio,
-            50.,
-            0.1,
-            Vec3::new(0., 1., 0.),
-        );
-
-        let mut triangles = Vec::new();
-        let mut models = Vec::new();
-        let mut materials = vec![Material::default()];
-        if let Err(err) = Model::add_obj(
-            // Path::new("cube.obj"),
-            // Path::new("suzanne.obj"),
-            // Path::new("teapot.obj"),
-            Path::new("xyzrgb_dragon.obj"),
-            false,
-            &mut triangles,
-            &mut models,
-            &mut materials,
-        ) {
-            error!("Failed to load a new object to the scene: {:?}", err);
-            return Err(ErrorCode::InitializationFailure);
-        }
-
-        // let nb_spheres = 100;
-        // let sphere_resolution = 128;
-        // let min_pos = -50.;
-        // let max_pos = 50.;
-        // let min_radius = 0.5;
-        // let max_radius = 5.;
-        // for i in 0..nb_spheres {
-        //     let mut rng = rand::thread_rng();
-        //     let radius = rng.gen::<f32>() * (max_radius-min_radius) + min_radius;
-        //     let material = Material::random();
-        //     let center = glam::Vec3::new(
-        //         rng.gen::<f32>() * (max_pos-min_pos) + min_pos,
-        //         rng.gen::<f32>() * (max_pos-min_pos) + min_pos,
-        //         rng.gen::<f32>() * (max_pos-min_pos) + min_pos,
-        //     );
-
-        //     if let Err(err) = Model::add_sphere(
-        //         sphere_resolution,
-        //         radius,
-        //         center,
-        //         Some(material),
-        //         &mut triangles,
-        //         &mut models,
-        //         &mut materials,
-        //     ) {
-        //         error!("Failed to load a new sphere to the scene: {:?}", err);
-        //         return Err(ErrorCode::InitializationFailure);
-        //     }
-
-        //     info!("Number of triangles after sphere number {}: {}", i, triangles.len());
-        // }
-
-        // panic!("nb tri: {:?}, nb mod: {:?}, nb mat: {:?}", triangles.len(), models.len(), materials.len());
-        let bvh_type = BvhType::Ploc;
+    fn init_scene_skeleton(
+        triangles: Vec<Triangle>,
+        models: Vec<Model>,
+        materials: Vec<Material>,
+        camera: Camera,
+    ) -> Scene {
+        let bvh_type = BvhType::default();
         let mut bvhs: HashMap<BvhType, Vec<BvhNode>> = Default::default();
-        let _ = bvhs.insert(BvhType::None, Vec::new());
+        let _ = bvhs.insert(BvhType::default(), Vec::new());
         let bvhs_build_times: HashMap<BvhType, Duration> = Default::default();
 
-        let mut scene = Scene {
+        Scene {
             triangles,
             models,
             materials,
@@ -137,14 +81,236 @@ impl Scene {
             bvhs_build_times,
             should_display_bvh: false,
             bvh_depth_to_display: 0,
+        }
+    }
+
+    // Scene with only one centered sphere
+    fn init_scene_single_sphere(
+        parameters: &ApplicationParameters,
+        sphere_resolution: u32,
+        sphere_position: glam::Vec3,
+        sphere_radius: f32,
+        sphere_color: glam::Vec3,
+    ) -> Result<Scene, ErrorCode> {
+        let width = parameters.window_width as f32;
+        let height = parameters.window_height as f32;
+        let aspect_ratio = width / height;
+        let camera = Camera::new(
+            Vec3::new(0., 0., -40.),
+            aspect_ratio,
+            50.,
+            0.1,
+            Vec3::new(0., 1., 0.),
+        );
+
+        let mut triangles = Vec::new();
+        let mut models = Vec::new();
+        let mut materials = vec![Material::default()];
+
+        let material = Material::uniform(&sphere_color);
+
+        if let Err(err) = Model::add_sphere(
+            sphere_resolution,
+            sphere_radius,
+            sphere_position,
+            Some(material),
+            &mut triangles,
+            &mut models,
+            &mut materials,
+        ) {
+            error!("Failed to load a new sphere to the scene: {:?}", err);
+            return Err(ErrorCode::InitializationFailure);
+        }
+
+        Ok(Self::init_scene_skeleton(
+            triangles, models, materials, camera,
+        ))
+    }
+
+    fn init_scene_objs(
+        parameters: &ApplicationParameters,
+        objs: Vec<(PathBuf, glam::Mat4)>,
+    ) -> Result<Scene, ErrorCode> {
+        let width = parameters.window_width as f32;
+        let height = parameters.window_height as f32;
+        let aspect_ratio = width / height;
+        let camera = Camera::new(
+            Vec3::new(0., 0., -200.),
+            aspect_ratio,
+            50.,
+            0.1,
+            Vec3::new(0., 1., 0.),
+        );
+
+        let mut triangles = Vec::new();
+        let mut models = Vec::new();
+        let mut materials = vec![Material::default()];
+
+        for (path, model_matrix) in objs {
+            if let Err(err) = Model::add_obj(
+                &path,
+                false,
+                Some(model_matrix),
+                &mut triangles,
+                &mut models,
+                &mut materials,
+            ) {
+                error!(
+                    "Failed to load the object `{:?}' to the scene: {:?}",
+                    path, err
+                );
+                return Err(ErrorCode::InitializationFailure);
+            }
+        }
+
+        Ok(Self::init_scene_skeleton(
+            triangles, models, materials, camera,
+        ))
+    }
+
+    fn init_scene_multi_spheres(
+        parameters: &ApplicationParameters,
+        nb_spheres: u16,
+        sphere_resolution: u32,
+        min_pos: f32,
+        max_pos: f32,
+        min_radius: f32,
+        max_radius: f32,
+    ) -> Result<Scene, ErrorCode> {
+        let width = parameters.window_width as f32;
+        let height = parameters.window_height as f32;
+        let aspect_ratio = width / height;
+        let camera = Camera::new(
+            Vec3::new(0., 0., -40.),
+            aspect_ratio,
+            50.,
+            0.1,
+            Vec3::new(0., 1., 0.),
+        );
+
+        let mut triangles = Vec::new();
+        let mut models = Vec::new();
+        let mut materials = vec![Material::default()];
+
+        for _ in 0..nb_spheres {
+            let mut rng = rand::thread_rng();
+            let radius = rng.gen::<f32>() * (max_radius - min_radius) + min_radius;
+            let material = Material::random();
+            let center = glam::Vec3::new(
+                rng.gen::<f32>() * (max_pos - min_pos) + min_pos,
+                rng.gen::<f32>() * (max_pos - min_pos) + min_pos,
+                rng.gen::<f32>() * (max_pos - min_pos) + min_pos,
+            );
+
+            if let Err(err) = Model::add_sphere(
+                sphere_resolution,
+                radius,
+                center,
+                Some(material),
+                &mut triangles,
+                &mut models,
+                &mut materials,
+            ) {
+                error!("Failed to load a new sphere to the scene: {:?}", err);
+                return Err(ErrorCode::InitializationFailure);
+            }
+        }
+
+        Ok(Self::init_scene_skeleton(
+            triangles, models, materials, camera,
+        ))
+    }
+
+    fn from_scene_type(
+        parameters: &ApplicationParameters,
+        scene_type: SceneType,
+    ) -> Result<Scene, ErrorCode> {
+        match scene_type {
+            SceneType::SingleSphere(resolution, position, radius, color) => {
+                Self::init_scene_single_sphere(parameters, resolution, position, radius, color)
+            }
+            SceneType::MultipleSphere(
+                nb_spheres,
+                resolution,
+                min_position,
+                max_position,
+                min_radius,
+                max_radius,
+            ) => Self::init_scene_multi_spheres(
+                parameters,
+                nb_spheres,
+                resolution,
+                min_position,
+                max_position,
+                min_radius,
+                max_radius,
+            ),
+            SceneType::MultipleObj(objs) => Self::init_scene_objs(parameters, objs),
+        }
+    }
+
+    pub fn init(parameters: &ApplicationParameters) -> Result<Scene, ErrorCode> {
+        #[allow(unused)]
+        let single_sphere = {
+            let resolution = 132;
+            let position = glam::Vec3::ZERO;
+            let radius = 10.;
+            let color = glam::Vec3::new(0.1, 0.5, 0.5);
+            SceneType::SingleSphere(resolution, position, radius, color)
         };
 
-        // TODO: Init the bvhs
+        #[allow(unused)]
+        let multi_spheres = {
+            let nb_spheres = 100;
+            let resolution = 132;
+            let min_position = -50.;
+            let max_position = 50.;
+            let min_radius = 0.5;
+            let max_radius = 5.;
+            SceneType::MultipleSphere(
+                nb_spheres,
+                resolution,
+                min_position,
+                max_position,
+                min_radius,
+                max_radius,
+            )
+        };
+
+        #[allow(unused)]
+        let multi_objs = {
+            let armadillo = (PathBuf::from("armadillo.obj"), glam::Mat4::IDENTITY);
+            let bunny = (PathBuf::from("stanford-bunny.obj"), glam::Mat4::IDENTITY);
+            let suzanne = (PathBuf::from("suzanne.obj"), glam::Mat4::IDENTITY);
+            let teapot = (PathBuf::from("teapot.obj"), glam::Mat4::IDENTITY);
+            let dragon = (
+                PathBuf::from("xyzrgb_dragon.obj"), 
+                glam::Mat4::from_translation(
+                    glam::Vec3::new(-50., -10., 0.)
+                )
+            );
+            SceneType::MultipleObj(vec![armadillo, bunny, suzanne, teapot, dragon])
+        };
+
+        // TODO: uncomment to select the scene
+        let mut scene = Self::from_scene_type(parameters, single_sphere)?;
+        // let mut scene = Self::from_scene_type(parameters, multi_spheres)?;
+        // let mut scene = Self::from_scene_type(parameters, multi_objs)?;
+
+        // TODO: uncomment to select the bvh type to build
         let bvhs_to_build = [
             // BvhType::DefaultTopDown,
+            // BvhType::DefaultBottomUp,
+            // BvhType::SahGuidedTopDown,
             BvhType::Ploc,
             BvhType::PlocParallel,
         ];
+
+        // TODO: uncomment to select the bvh type to display initialy
+        let displayed_bvh_type = BvhType::PlocParallel;
+        scene.bvh_type = displayed_bvh_type;
+        scene.bvh_last_type = displayed_bvh_type;
+
         for bvh_type in bvhs_to_build {
             let time = match scene.init_bvh(bvh_type) {
                 Ok(time) => time,
@@ -158,11 +324,6 @@ impl Scene {
                 time.as_secs_f32(),
                 bvh_type
             );
-            // info!(
-            //     "`{:?}' bvh structure:\n{}",
-            //     bvh_type,
-            //     BvhNode::to_string(scene.bvhs.get(&BvhType::DefaultTopDown).unwrap())
-            // );
             let _ = scene.bvhs_build_times.insert(bvh_type, time);
         }
 
@@ -314,7 +475,7 @@ impl Scene {
     }
 
     pub fn get_max_bvh_detph(&self) -> u32 {
-        // TODO:
+        // TODO: access the max bvh depth
         10
     }
 }

@@ -24,10 +24,7 @@ impl VulkanContext<'_> {
         let mut required_layers = Vec::new();
 
         #[cfg(debug_assertions)]
-        required_layers.push(
-            unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_LAYER_KHRONOS_validation\0") }
-                .as_ptr(),
-        );
+        required_layers.push(c"VK_LAYER_KHRONOS_validation".as_ptr());
 
         let available_layers = unsafe {
             match self.get_entry()?.enumerate_instance_layer_properties() {
@@ -81,8 +78,7 @@ impl VulkanContext<'_> {
             };
 
         #[cfg(debug_assertions)]
-        required_extensions
-            .push(unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_EXT_debug_utils\0").as_ptr() });
+        required_extensions.push(c"VK_EXT_debug_utils".as_ptr());
 
         Ok(required_extensions)
     }
