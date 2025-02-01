@@ -50,6 +50,19 @@ pub struct Scene {
     pub bvhs_build_times: HashMap<BvhType, Duration>,
     pub should_display_bvh: bool,
     pub bvh_depth_to_display: u32,
+
+    duration: f64,
+    best_duration: f64,
+    worst_duration: f64,
+    nb_frames: u32,
+    nb_frames_threshold: u32,
+
+    pub best_fps: u32,
+    pub worst_fps: u32,
+    pub avg_fps: u32,
+    pub best_ms: f64,
+    pub worst_ms: f64,
+    pub avg_ms: f64,
 }
 
 pub enum SceneType {
@@ -92,6 +105,17 @@ impl Scene {
             bvhs_build_times,
             should_display_bvh: false,
             bvh_depth_to_display: 0,
+            duration: 0.,
+            best_duration: f64::MAX,
+            worst_duration: 0.,
+            nb_frames: 0,
+            nb_frames_threshold: 30,
+            best_fps: 0,
+            worst_fps: 0,
+            avg_fps: 0,
+            best_ms: 0.,
+            worst_ms: 0.,
+            avg_ms: 0.,
         })
     }
 
@@ -341,22 +365,24 @@ impl Scene {
         };
 
         // TODO: uncomment to select the scene
-        let mut scene = Self::from_scene_type(parameters, single_sphere)?;
-        // let mut scene = Self::from_scene_type(parameters, multi_spheres)?;
+        // let mut scene = Self::from_scene_type(parameters, single_sphere)?;
+        let mut scene = Self::from_scene_type(parameters, multi_spheres)?;
         // let mut scene = Self::from_scene_type(parameters, multi_objs)?;
 
         // TODO: uncomment to select the bvh type to build
         let bvhs_to_build = [
             // BvhType::DefaultTopDown,
-            BvhType::BottomUpSah,
+            // BvhType::BottomUpSah,
+            // BvhType::DefaultBottomUp,
             // BvhType::SahGuidedTopDown,
             // BvhType::Ploc,
-            // BvhType::PlocParallel,
+            BvhType::PlocParallel,
         ];
 
         // TODO: uncomment to select the bvh type to display initialy
-        let displayed_bvh_type = BvhType::BottomUpSah;
-        // let displayed_bvh_type = BvhType::PlocParallel;
+        // let displayed_bvh_type = BvhType::DefaultBottomUp;
+        let displayed_bvh_type = BvhType::PlocParallel;
+
         scene.bvh_type = displayed_bvh_type;
         scene.bvh_last_type = displayed_bvh_type;
 
@@ -394,6 +420,28 @@ impl Scene {
         };
         self.current_time = (now - self.start_time) as f32;
 
+        // Delta time computation
+        self.nb_frames += 1;
+        self.duration += delta_time;
+        if delta_time < self.best_duration {
+            self.best_duration = delta_time;
+        }
+        if delta_time > self.worst_duration {
+            self.worst_duration = delta_time;
+        }
+        if self.nb_frames > self.nb_frames_threshold {
+            self.best_fps = (1. / self.best_duration) as u32;
+            self.worst_fps = (1. / self.worst_duration) as u32;
+            self.avg_fps = (self.nb_frames as f64 / self.duration) as u32;
+            self.best_ms = 1000. * self.best_duration;
+            self.worst_ms = 1000. * self.worst_duration;
+            self.avg_ms = 1000. * self.duration / (self.nb_frames as f64);
+            self.duration = 0.;
+            self.nb_frames = 0;
+            self.best_duration = f64::MAX;
+            self.worst_duration = 0.;
+        }
+
         // Move the camera
         if keys.contains_key(&Key::W) && (keys.get(&Key::W).unwrap() == &KeyState::Pressed) {
             self.camera
@@ -430,6 +478,20 @@ impl Scene {
                 Ok(Duration::default())
             }
             // TODO: add other BVH constructions
+            BvhType::DefaultBottomUp => {
+                let start = Instant::now();
+                match BvhDefaultTopDown::build(self) {
+                    Ok(new_bvh) => {
+                        let end = Instant::now();
+                        let _ = self.bvhs.insert(BvhType::DefaultBottomUp, new_bvh);
+                        Ok(end - start)
+                    }
+                    Err(err) => {
+                        error!("Failed to build the default bottom up bvh: {:?}", err);
+                        Err(ErrorCode::Unknown)
+                    }
+                }
+            }
             BvhType::BottomUpSah => {
                 let start = Instant::now();
                 match BvhBottomUpSah::build(self) {

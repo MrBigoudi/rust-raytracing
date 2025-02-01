@@ -3,14 +3,14 @@ use crate::application::{core::error::ErrorCode, scene::Scene};
 use super::{Bvh, BvhNode};
 
 #[derive(Clone, Copy)]
-pub struct BvhBottomUpSahNode {
+pub struct BvhDefaultBottomUpNode {
     pub node: BvhNode,
     pub is_available: bool,
 }
 
-impl BvhBottomUpSahNode{
+impl BvhDefaultBottomUpNode{
     pub fn new(node: BvhNode) -> Self {
-        BvhBottomUpSahNode {
+        BvhDefaultBottomUpNode {
             node,
             is_available: true,
         }
@@ -18,16 +18,16 @@ impl BvhBottomUpSahNode{
 }
 
 #[derive(Clone)]
-pub struct BvhBottomUpSah<'a> {
-    pub bvh: Vec<BvhBottomUpSahNode>,
+pub struct BvhDefaultBottomUp<'a> {
+    pub bvh: Vec<BvhDefaultBottomUpNode>,
     pub scene: &'a Scene,
 }
 
 
-impl<'a> BvhBottomUpSah<'a> {
+impl<'a> BvhDefaultBottomUp<'a> {
     pub fn new(scene: &'a Scene) -> Self {
         Self {
-            bvh: vec![BvhBottomUpSahNode{
+            bvh: vec![BvhDefaultBottomUpNode{
                 node: BvhNode::default(),
                 is_available: false,
             }], // Add a dummy element
@@ -65,26 +65,24 @@ impl<'a> BvhBottomUpSah<'a> {
                 &model, 
                 index as u32,
             );
-            self.bvh.push(BvhBottomUpSahNode::new(leaf));
+            self.bvh.push(BvhDefaultBottomUpNode::new(leaf));
         }
     }
 }
 
-impl Bvh for BvhBottomUpSah<'_> {
+impl Bvh for BvhDefaultBottomUp<'_> {
     fn build(scene: &Scene) -> Result<Vec<BvhNode>, ErrorCode> {
-        let mut bvh_bottom_up = BvhBottomUpSah::new(scene);
+        let mut bvh_bottom_up = BvhDefaultBottomUp::new(scene);
         
         // Create leaves
         bvh_bottom_up.create_leaves();
 
         // Until there is only one node
         while bvh_bottom_up.nb_available() > 1 {
-            let mut best_sah = f32::MAX;
-            let mut best_candidates = (0,1);
 
             // For each node
             let nb_node = bvh_bottom_up.bvh.len();
-            for i in 1..nb_node {
+            'outer: for i in 1..nb_node {
                 let cur_node = bvh_bottom_up.bvh[i];
                 if !cur_node.is_available { continue; }
                 // For each other node
@@ -93,37 +91,20 @@ impl Bvh for BvhBottomUpSah<'_> {
                     let test_node = bvh_bottom_up.bvh[j];
                     if !test_node.is_available { continue; }
 
-                    // Find the best fusion
                     let new_node = BvhNode::merge_bottom_up(
                         &cur_node.node, &test_node.node, 
                         i as u32, j as u32
                     );
 
-                    bvh_bottom_up.bvh.push(BvhBottomUpSahNode::new(new_node));
-                    let new_sah = new_node.get_sah_cost(&bvh_bottom_up.get_bvh(), 1., 1.);
+                    bvh_bottom_up.bvh.push(BvhDefaultBottomUpNode::new(new_node));
 
-                    if new_sah < best_sah {
-                        best_sah = new_sah;
-                        best_candidates = (i, j);
-                    }
+                    // Update the available nodes
+                    bvh_bottom_up.bvh[i].is_available = false;
+                    bvh_bottom_up.bvh[j].is_available = false;
 
-                    bvh_bottom_up.bvh.pop().unwrap();
+                    break 'outer;
                 }
             }
-            // Fuse the two nodes
-            let left_index = best_candidates.0;
-            let left_node = bvh_bottom_up.bvh[left_index].node;
-            let right_index = best_candidates.1;
-            let right_node = bvh_bottom_up.bvh[right_index].node;
-            let new_node = BvhNode::merge_bottom_up(
-                &left_node, &right_node, 
-                left_index as u32, right_index as u32
-            );
-            bvh_bottom_up.bvh.push(BvhBottomUpSahNode::new(new_node));
-
-            // Update the available nodes
-            bvh_bottom_up.bvh[left_index].is_available = false;
-            bvh_bottom_up.bvh[right_index].is_available = false;
         }
         
         Ok(bvh_bottom_up.get_bvh())

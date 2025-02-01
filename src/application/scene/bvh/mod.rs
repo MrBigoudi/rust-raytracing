@@ -10,6 +10,7 @@ pub mod bottom_up_sah;
 pub mod default_top_down;
 pub mod ploc;
 pub mod ploc_parallel;
+pub mod default_bottom_up;
 
 #[derive(Debug, Default, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum BvhType {

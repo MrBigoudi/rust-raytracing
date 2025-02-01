@@ -216,35 +216,89 @@ impl VulkanContext<'_> {
 
         // TODO: Create the GUI window
         ui.window("Raytracing Parameters")
-            .size([300.0, 110.0], imgui::Condition::FirstUseEver)
+            .size([200.0, 475.0], imgui::Condition::FirstUseEver)
             .build(|| {
                 ui.checkbox("Toogle wireframe mode", &mut scene.is_wireframe_on);
                 ui.new_line();
                 ui.text("BVH type");
-                ui.radio_button("None", &mut scene.bvh_type, BvhType::None);
-                ui.same_line();
+
+                let disabled = !scene.bvhs.contains_key(&BvhType::None);
+                let end = ui.begin_disabled(disabled);
+                ui.radio_button(
+                    "None", 
+                    &mut scene.bvh_type, 
+                    BvhType::None
+                );
+                end.end();
+
+                let disabled = !scene.bvhs.contains_key(&BvhType::DefaultTopDown);
+                let end = ui.begin_disabled(disabled);
                 ui.radio_button(
                     "Default Top Down",
                     &mut scene.bvh_type,
                     BvhType::DefaultTopDown,
                 );
+                end.end();
+
+                let disabled = !scene.bvhs.contains_key(&BvhType::DefaultBottomUp);
+                let end = ui.begin_disabled(disabled);
+                ui.radio_button(
+                    "Default Bottom Up",
+                    &mut scene.bvh_type,
+                    BvhType::DefaultBottomUp,
+                );
+                end.end();
+
+                let disabled = !scene.bvhs.contains_key(&BvhType::BottomUpSah);
+                let end = ui.begin_disabled(disabled);
                 ui.radio_button(
                     "Bottom Up Sah",
                     &mut scene.bvh_type,
                     BvhType::BottomUpSah,
                 );
-                ui.same_line();
-                ui.radio_button("Ploc", &mut scene.bvh_type, BvhType::Ploc);
-                ui.same_line();
-                ui.radio_button("Ploc Parallel", &mut scene.bvh_type, BvhType::PlocParallel);
+                end.end();
+
+                let disabled = !scene.bvhs.contains_key(&BvhType::Ploc);
+                let end = ui.begin_disabled(disabled);
+                ui.radio_button(
+                    "Ploc", 
+                    &mut scene.bvh_type, 
+                    BvhType::Ploc
+                );
+                end.end();
+
+                let disabled = !scene.bvhs.contains_key(&BvhType::PlocParallel);
+                let end = ui.begin_disabled(disabled);
+                ui.radio_button(
+                    "Ploc Parallel", 
+                    &mut scene.bvh_type, 
+                    BvhType::PlocParallel
+                );
+                end.end();
                 // TODO: add other bvh types
+
                 ui.new_line();
                 ui.checkbox("Display Bvh", &mut scene.should_display_bvh);
+                ui.new_line();
+                ui.text("Bvh depth to display");
                 ui.slider(
-                    "Bvh depth to display",
+                    "depth",
                     0,
                     scene.get_max_bvh_detph(),
                     &mut scene.bvh_depth_to_display,
+                );
+
+                ui.new_line();
+                ui.text(
+                    format!("FPS:\nMax:{:03}\nAvg:{:03}\nMin:{:03}", 
+                        scene.best_fps, scene.avg_fps, scene.worst_fps,
+                    )
+                );
+                ui.new_line();
+                ui.text(
+                    format!("MS:\nMin:{:.2}\nAvg:{:.2}\nMax:{:.2}", 
+                        scene.best_ms, scene.avg_ms, scene.worst_ms,
+                    )
                 );
             });
 
