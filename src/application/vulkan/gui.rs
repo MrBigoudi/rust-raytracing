@@ -228,6 +228,11 @@ impl VulkanContext<'_> {
                     &mut scene.bvh_type,
                     BvhType::DefaultTopDown,
                 );
+                ui.radio_button(
+                    "Bottom Up Sah",
+                    &mut scene.bvh_type,
+                    BvhType::BottomUpSah,
+                );
                 ui.same_line();
                 ui.radio_button("Ploc", &mut scene.bvh_type, BvhType::Ploc);
                 ui.same_line();

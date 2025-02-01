@@ -3,10 +3,10 @@ use std::fmt::Debug;
 
 use crate::application::core::error::ErrorCode;
 
-use super::Scene;
+use super::{model::Model, triangle::Triangle, Scene};
 
 pub mod aabb;
-pub mod default_bottom_up;
+pub mod bottom_up_sah;
 pub mod default_top_down;
 pub mod ploc;
 pub mod ploc_parallel;
@@ -16,12 +16,12 @@ pub enum BvhType {
     #[default]
     None = 0,
     DefaultTopDown = 1,
-    // TODO: default bottom up construction
     DefaultBottomUp = 2,
+    BottomUpSah = 3,
     // TODO: sah guided construction
-    SahGuidedTopDown = 3,
-    Ploc = 4,
-    PlocParallel = 5,
+    SahGuidedTopDown = 4,
+    Ploc = 5,
+    PlocParallel = 6,
 }
 
 #[derive(Default, Clone, Copy)]
@@ -48,12 +48,59 @@ impl Debug for BvhNode {
 }
 
 impl BvhNode {
+    pub fn from_triangle(triangle: &Triangle, model: &Model, index: u32) -> Self {
+        let aabb = Aabb::from_triangle(&triangle, model.model_matrix);
+        Self{
+            bounding_box: aabb,
+            triangle_index: index,
+            left_child_index: 0,
+            right_child_index: 0,
+            padding_1: 0,
+        }
+    }
+
     pub fn is_leaf(&self) -> bool {
         if self.left_child_index == 0 || self.right_child_index == 0 {
             assert_eq!(self.left_child_index, self.right_child_index);
             true
         } else {
             false
+        }
+    }
+
+    pub fn merge_bottom_up(left_node: &BvhNode, right_node: &BvhNode, left_index: u32, right_index: u32) -> BvhNode {
+        let bounding_box = Aabb::merge(&left_node.bounding_box, &right_node.bounding_box);
+        BvhNode {
+            bounding_box,
+            triangle_index: 0,
+            left_child_index: left_index,
+            right_child_index: right_index,
+            padding_1: 0,
+        }
+    }
+
+    pub fn get_sah_cost(&self, 
+        bvh: &Vec<BvhNode>,
+        cost_traverse_internal: f32,
+        cost_triangle_intersection: f32,
+    ) -> f32 {
+        if self.is_leaf() {
+            return cost_triangle_intersection;
+        } else {
+            let area = self.bounding_box.get_surface_area();
+
+            let left = bvh[self.left_child_index as usize];
+            let right = bvh[self.right_child_index as usize];
+
+            let area_left = left.bounding_box.get_surface_area();
+            let factor_left = area_left / area;
+            let cost_left = left.get_sah_cost(bvh, cost_traverse_internal, cost_triangle_intersection);
+
+            let area_right = right.bounding_box.get_surface_area();
+            let factor_right = area_right / area;
+            let cost_right = right.get_sah_cost(bvh, cost_traverse_internal, cost_triangle_intersection);
+
+            return cost_traverse_internal + factor_left*cost_left + factor_right*cost_right;
         }
     }
 

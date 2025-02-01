@@ -9,6 +9,8 @@ This project relies on the following:
 
 ## HOWTO
 
+### Building and running
+
 To run in debug mode:
 ```sh
 RUST_LOG=debug cargo run
@@ -21,6 +23,10 @@ cargo build --release
 cargo run --release
 ```
 
-## Shaders
+### Shaders
 
 The shaders are automatically built using the `build.rs` script.
+
+### Scene
+
+To change the scene, you can update the function `Scene::init` in `src/application/scene/mod.rs`.

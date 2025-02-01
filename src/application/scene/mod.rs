@@ -5,8 +5,7 @@ use std::{
 };
 
 use bvh::{
-    aabb::Aabb, default_top_down::BvhDefaultTopDown, ploc::BvhPloc, ploc_parallel::BvhPlocParallel,
-    Bvh, BvhNode, BvhType,
+    aabb::Aabb, bottom_up_sah::BvhBottomUpSah, default_top_down::BvhDefaultTopDown, ploc::BvhPloc, ploc_parallel::BvhPlocParallel, Bvh, BvhNode, BvhType
 };
 use camera::{Camera, CameraMovement};
 use glam::Vec3;
@@ -264,7 +263,7 @@ impl Scene {
     pub fn init(parameters: &ApplicationParameters) -> Result<Scene, ErrorCode> {
         #[allow(unused)]
         let single_sphere = {
-            let resolution = 132;
+            let resolution = 16;
             let position = glam::Vec3::ZERO;
             let radius = 10.;
             let color = glam::Vec3::new(0.1, 0.5, 0.5);
@@ -342,21 +341,22 @@ impl Scene {
         };
 
         // TODO: uncomment to select the scene
-        // let mut scene = Self::from_scene_type(parameters, single_sphere)?;
+        let mut scene = Self::from_scene_type(parameters, single_sphere)?;
         // let mut scene = Self::from_scene_type(parameters, multi_spheres)?;
-        let mut scene = Self::from_scene_type(parameters, multi_objs)?;
+        // let mut scene = Self::from_scene_type(parameters, multi_objs)?;
 
         // TODO: uncomment to select the bvh type to build
         let bvhs_to_build = [
             // BvhType::DefaultTopDown,
-            // BvhType::DefaultBottomUp,
+            BvhType::BottomUpSah,
             // BvhType::SahGuidedTopDown,
-            BvhType::Ploc,
-            BvhType::PlocParallel,
+            // BvhType::Ploc,
+            // BvhType::PlocParallel,
         ];
 
         // TODO: uncomment to select the bvh type to display initialy
-        let displayed_bvh_type = BvhType::PlocParallel;
+        let displayed_bvh_type = BvhType::BottomUpSah;
+        // let displayed_bvh_type = BvhType::PlocParallel;
         scene.bvh_type = displayed_bvh_type;
         scene.bvh_last_type = displayed_bvh_type;
 
@@ -428,6 +428,21 @@ impl Scene {
             BvhType::None => {
                 warn!("No bvh need to be build...");
                 Ok(Duration::default())
+            }
+            // TODO: add other BVH constructions
+            BvhType::BottomUpSah => {
+                let start = Instant::now();
+                match BvhBottomUpSah::build(self) {
+                    Ok(new_bvh) => {
+                        let end = Instant::now();
+                        let _ = self.bvhs.insert(BvhType::BottomUpSah, new_bvh);
+                        Ok(end - start)
+                    }
+                    Err(err) => {
+                        error!("Failed to build the bottom up sah bvh: {:?}", err);
+                        Err(ErrorCode::Unknown)
+                    }
+                }
             }
             BvhType::DefaultTopDown => {
                 let start = Instant::now();
