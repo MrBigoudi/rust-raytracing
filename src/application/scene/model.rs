@@ -58,7 +58,7 @@ impl Model {
         for new_triangle in &mut new_triangles {
             new_triangle.model_index += new_model_first_idx;
         }
-        
+
         for new_model in &mut new_models {
             // Be careful about default material at index = 0
             if new_model.material_index > 0 {
@@ -154,7 +154,7 @@ impl Model {
         // Normals and texture coordinates are also loaded, but not printed in this example
         info!("model.vertices: {}", mesh.positions.len() / 3);
 
-        assert!(mesh.positions.len() % 3 == 0);
+        debug_assert!(mesh.positions.len() % 3 == 0);
         for v in 0..mesh.positions.len() / 3 {
             info!(
                 "    v[{}] = ({}, {}, {})",
@@ -233,7 +233,7 @@ impl Model {
 
             // Get the vertices
             let mut vertices = Vec::new();
-            assert!(mesh.positions.len() % 3 == 0);
+            debug_assert!(mesh.positions.len() % 3 == 0);
             for v in 0..mesh.positions.len() / 3 {
                 let vx = mesh.positions[3 * v];
                 let vy = mesh.positions[3 * v + 1];

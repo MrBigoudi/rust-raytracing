@@ -129,9 +129,15 @@ void main(uint3 thread_id: SV_DispatchThreadID) {
     float sun_speed_y = sun_speed_xz / 3.f;
     float sun_angle_xz = _PushConstants.current_time * sun_speed_xz;
     float sun_angle_y = _PushConstants.current_time * sun_speed_y;
-    sun.direction = normalize(float3(cos(sun_angle_xz), sin(sun_angle_y), sin(sun_angle_xz)));
+    // sun.direction = normalize(float3(cos(sun_angle_xz), sin(sun_angle_y), sin(sun_angle_xz)));
+    sun.direction = normalize(float3(
+        cos(sun_angle_xz), 
+        0.f, 
+        sin(sun_angle_xz)
+    ));
     
     float4 color = float4(0.);
+    
     get_color(
         sun, 
         _Bvhs,

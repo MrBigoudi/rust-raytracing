@@ -25,7 +25,7 @@ cargo run --release
 
 ### Shaders
 
-The shaders are automatically built using the `build.rs` script.
+The shaders are automatically built using the `build.rs` script. The shaders inside the `ploc` directory are tests for a future implementation of a compute shader based PLOC implementation.
 
 ### Scene
 

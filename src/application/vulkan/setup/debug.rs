@@ -6,6 +6,7 @@ use log::{debug, error, info, warn};
 use crate::application::{core::error::ErrorCode, vulkan::types::VulkanContext};
 
 /// Callback function for Vulkan debug messages.
+#[allow(unused)]
 unsafe extern "system" fn vulkan_debug_callback(
     message_severity: vk::DebugUtilsMessageSeverityFlagsEXT,
     message_type: vk::DebugUtilsMessageTypeFlagsEXT,
@@ -44,6 +45,7 @@ unsafe extern "system" fn vulkan_debug_callback(
 }
 
 impl VulkanContext<'_> {
+    #[allow(unused)]
     pub fn get_debug_loader(&self) -> Result<&debug_utils::Instance, ErrorCode> {
         match &self.debug_utils_loader {
             Some(instance) => Ok(instance),
@@ -54,6 +56,7 @@ impl VulkanContext<'_> {
         }
     }
 
+    #[allow(unused)]
     pub fn get_debug_callback(&self) -> Result<&vk::DebugUtilsMessengerEXT, ErrorCode> {
         match &self.debug_callback {
             Some(debug_callback) => Ok(debug_callback),
@@ -64,6 +67,7 @@ impl VulkanContext<'_> {
         }
     }
 
+    #[allow(unused)]
     pub fn init_debugger(&mut self) -> Result<(), ErrorCode> {
         // Setup debug callback
         let debug_info = vk::DebugUtilsMessengerCreateInfoEXT::default()
@@ -100,6 +104,7 @@ impl VulkanContext<'_> {
         Ok(())
     }
 
+    #[allow(unused)]
     pub fn clean_debugger(&mut self) -> Result<(), ErrorCode> {
         if self.debug_utils_loader.is_none() && self.debug_callback.is_none() {
             return Ok(());

@@ -1441,23 +1441,26 @@ void main()
 
 
     float sun_angle_xz_0 = _PushConstants_0.current_time_0 * 0.00100000004749745;
-    float sun_angle_y_0 = _PushConstants_0.current_time_0 * 0.00033333335886709;
-    vec3 _S108 = normalize(vec3(cos(sun_angle_xz_0), sin(sun_angle_y_0), sin(sun_angle_xz_0)));
 
-#line 132
+
+    vec3 _S108 = normalize(vec3(cos(sun_angle_xz_0), 0.0, sin(sun_angle_xz_0)));
+
+#line 133
     sun_0.direction_1 = _S108;
 
+#line 139
     const vec4 _S109 = vec4(0.0);
 
-#line 134
+#line 139
     vec4 color_1 = _S109;
+
     get_color_0(sun_0, _PushConstants_0.bvh_type_0, _PushConstants_0.nb_triangles_0, closest_hit_1, color_1, _PushConstants_0.is_wireframe_on_0 != 0U);
 
-#line 149
+#line 155
     float _S110 = bvh_color_1.w;
     vec4 _S111 = _S110 * bvh_color_1 + (1.0 - _S110) * color_1;
 
-#line 150
+#line 156
     color_1 = _S111;
     color_1[3] = 1.0;
 

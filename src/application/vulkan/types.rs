@@ -30,7 +30,9 @@ pub struct VulkanContext<'a> {
     pub instance: Option<Instance>,
     pub allocator: Option<ManuallyDrop<AllocatorWrapper>>,
 
+    #[allow(unused)]
     pub debug_utils_loader: Option<debug_utils::Instance>,
+    #[allow(unused)]
     pub debug_callback: Option<vk::DebugUtilsMessengerEXT>,
 
     pub surface_loader: Option<surface::Instance>,

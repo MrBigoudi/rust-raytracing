@@ -64,7 +64,7 @@ impl<'a> BvhDefaultTopDown<'a> {
     pub fn get_false_leaves_indices(&self) -> Vec<usize> {
         let mut leaves = Vec::new();
         for (index, node) in self.bvh.iter().enumerate() {
-            if node.triangles.len() != 1 && node.base.is_leaf() {
+            if node.triangles.len() > 1 && node.base.is_leaf() {
                 leaves.push(index);
             }
         }
@@ -93,7 +93,7 @@ impl<'a> BvhDefaultTopDown<'a> {
 
     fn build_last_two_children(&self, bvh_node_index: usize) -> [BvhDefaultTopDownNode; 2] {
         let bvh_node = &self.bvh[bvh_node_index];
-        assert!(bvh_node.triangles.len() == 2);
+        debug_assert!(bvh_node.triangles.len() == 2);
         let left_triangle_index = bvh_node.triangles[0];
         let left_triangle = self.scene.triangles[left_triangle_index];
         let left_model_matrix = self.scene.models[left_triangle.model_index].model_matrix;
@@ -183,10 +183,10 @@ impl<'a> BvhDefaultTopDown<'a> {
         }
 
         // An internal node must have at least one triangle in each of its children
-        assert!(!left_triangles.is_empty());
-        assert!(!right_triangles.is_empty());
-        assert!(!left_triangles_indices.is_empty());
-        assert!(!right_triangles_indices.is_empty());
+        debug_assert!(!left_triangles.is_empty());
+        debug_assert!(!right_triangles.is_empty());
+        debug_assert!(!left_triangles_indices.is_empty());
+        debug_assert!(!right_triangles_indices.is_empty());
 
         let right_aabb = match Aabb::from_scene(&right_triangles, &self.scene.models) {
             Ok(aabb) => aabb,

@@ -305,7 +305,7 @@ impl PlocParameters {
     pub fn sort(triangle_indices: &mut [usize], morton_codes: &mut [u32]) {
         // Put them in tuple
         let mut indices_codes = Vec::new();
-        assert!(triangle_indices.len() == morton_codes.len());
+        debug_assert!(triangle_indices.len() == morton_codes.len());
         for i in 0..triangle_indices.len() {
             indices_codes.push((morton_codes[i], triangle_indices[i]));
         }

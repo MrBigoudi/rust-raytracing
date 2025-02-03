@@ -5,7 +5,8 @@ use std::{
 };
 
 use bvh::{
-    aabb::Aabb, bottom_up_sah::BvhBottomUpSah, default_top_down::BvhDefaultTopDown, ploc::BvhPloc, ploc_parallel::BvhPlocParallel, Bvh, BvhNode, BvhType
+    aabb::Aabb, bottom_up_sah::BvhBottomUpSah, default_top_down::BvhDefaultTopDown, ploc::BvhPloc,
+    ploc_parallel::BvhPlocParallel, top_down_sah::BvhTopDownSah, Bvh, BvhNode, BvhType,
 };
 use camera::{Camera, CameraMovement};
 use glam::Vec3;
@@ -157,9 +158,7 @@ impl Scene {
             return Err(ErrorCode::InitializationFailure);
         }
 
-        Self::init_scene_skeleton(
-            triangles, models, materials, camera,
-        )
+        Self::init_scene_skeleton(triangles, models, materials, camera)
     }
 
     fn init_scene_objs(
@@ -198,9 +197,7 @@ impl Scene {
             }
         }
 
-        Self::init_scene_skeleton(
-            triangles, models, materials, camera,
-        )
+        Self::init_scene_skeleton(triangles, models, materials, camera)
     }
 
     fn init_scene_multi_spheres(
@@ -251,9 +248,7 @@ impl Scene {
             }
         }
 
-        Self::init_scene_skeleton(
-            triangles, models, materials, camera,
-        )
+        Self::init_scene_skeleton(triangles, models, materials, camera)
     }
 
     fn from_scene_type(
@@ -313,6 +308,14 @@ impl Scene {
         };
 
         #[allow(unused)]
+        let single_obj = {
+            let mut objs = Vec::new();
+            let armadillo = (PathBuf::from("armadillo.obj"), glam::Mat4::IDENTITY);
+            objs.push(armadillo);
+            SceneType::MultipleObj(objs)
+        };
+
+        #[allow(unused)]
         let multi_objs = {
             let mut objs = Vec::new();
             let armadillo = (PathBuf::from("armadillo.obj"), glam::Mat4::IDENTITY);
@@ -325,40 +328,43 @@ impl Scene {
                 let angle = (i as f32 / num_objects as f32) * std::f32::consts::TAU;
                 let x = radius * angle.cos();
                 let z = radius * angle.sin();
-                
+
                 // Bunny circle at height 100
                 let bunny_height = 100.0;
-                let bunny_translation = glam::Mat4::from_translation(glam::Vec3::new(x, bunny_height, z));
+                let bunny_translation =
+                    glam::Mat4::from_translation(glam::Vec3::new(x, bunny_height, z));
                 let bunny_rotation = glam::Mat4::from_rotation_y(-angle);
                 let bunny_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(100.));
                 let bunny_model_matrix = bunny_translation * bunny_rotation * bunny_scale_factor;
                 let bunny = (PathBuf::from("stanford-bunny.obj"), bunny_model_matrix);
                 objs.push(bunny);
-        
+
                 // Suzanne circle at height 0
                 let suzanne_height = 0.0;
-                let suzanne_translation = glam::Mat4::from_translation(glam::Vec3::new(x, suzanne_height, z));
+                let suzanne_translation =
+                    glam::Mat4::from_translation(glam::Vec3::new(x, suzanne_height, z));
                 let suzanne_rotation = glam::Mat4::from_rotation_y(-angle);
                 let suzanne_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(10.));
-                let suzanne_model_matrix = suzanne_translation * suzanne_rotation * suzanne_scale_factor;
+                let suzanne_model_matrix =
+                    suzanne_translation * suzanne_rotation * suzanne_scale_factor;
                 let suzanne = (PathBuf::from("suzanne.obj"), suzanne_model_matrix);
                 objs.push(suzanne);
-        
+
                 // Teapot circle at height -100
                 let teapot_height = -100.0;
-                let teapot_translation = glam::Mat4::from_translation(glam::Vec3::new(x, teapot_height, z));
+                let teapot_translation =
+                    glam::Mat4::from_translation(glam::Vec3::new(x, teapot_height, z));
                 let teapot_rotation = glam::Mat4::from_rotation_y(-angle);
                 let teapot_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(10.));
-                let teapot_model_matrix = teapot_translation * teapot_rotation * teapot_scale_factor;
+                let teapot_model_matrix =
+                    teapot_translation * teapot_rotation * teapot_scale_factor;
                 let teapot = (PathBuf::from("teapot.obj"), teapot_model_matrix);
                 objs.push(teapot);
             }
-            
+
             let dragon = (
-                PathBuf::from("xyzrgb_dragon.obj"), 
-                glam::Mat4::from_translation(
-                    glam::Vec3::new(-50., -100., 0.)
-                )
+                PathBuf::from("xyzrgb_dragon.obj"),
+                glam::Mat4::from_translation(glam::Vec3::new(-50., -100., 0.)),
             );
             objs.push(dragon);
             SceneType::MultipleObj(objs)
@@ -366,21 +372,21 @@ impl Scene {
 
         // TODO: uncomment to select the scene
         // let mut scene = Self::from_scene_type(parameters, single_sphere)?;
-        let mut scene = Self::from_scene_type(parameters, multi_spheres)?;
+        // let mut scene = Self::from_scene_type(parameters, single_obj)?;
         // let mut scene = Self::from_scene_type(parameters, multi_objs)?;
+        let mut scene = Self::from_scene_type(parameters, multi_spheres)?;
 
         // TODO: uncomment to select the bvh type to build
         let bvhs_to_build = [
-            // BvhType::DefaultTopDown,
+            BvhType::DefaultTopDown,
+            BvhType::TopDownSah,
+            BvhType::DefaultBottomUp,
             // BvhType::BottomUpSah,
-            // BvhType::DefaultBottomUp,
-            // BvhType::SahGuidedTopDown,
-            // BvhType::Ploc,
+            BvhType::Ploc,
             BvhType::PlocParallel,
         ];
 
         // TODO: uncomment to select the bvh type to display initialy
-        // let displayed_bvh_type = BvhType::DefaultBottomUp;
         let displayed_bvh_type = BvhType::PlocParallel;
 
         scene.bvh_type = displayed_bvh_type;
@@ -477,7 +483,6 @@ impl Scene {
                 warn!("No bvh need to be build...");
                 Ok(Duration::default())
             }
-            // TODO: add other BVH constructions
             BvhType::DefaultBottomUp => {
                 let start = Instant::now();
                 match BvhDefaultTopDown::build(self) {
@@ -520,6 +525,20 @@ impl Scene {
                     }
                 }
             }
+            BvhType::TopDownSah => {
+                let start = Instant::now();
+                match BvhTopDownSah::build(self) {
+                    Ok(new_bvh) => {
+                        let end = Instant::now();
+                        let _ = self.bvhs.insert(BvhType::TopDownSah, new_bvh);
+                        Ok(end - start)
+                    }
+                    Err(err) => {
+                        error!("Failed to build the top down bvh sah: {:?}", err);
+                        Err(ErrorCode::Unknown)
+                    }
+                }
+            }
             BvhType::Ploc => {
                 let start = Instant::now();
                 match BvhPloc::build(self) {
@@ -547,10 +566,6 @@ impl Scene {
                         Err(ErrorCode::Unknown)
                     }
                 }
-            }
-            _ => {
-                error!("Tried to build an unkwnown BVH");
-                Err(ErrorCode::Unknown)
             }
         }
     }

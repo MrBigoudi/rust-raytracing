@@ -83,6 +83,7 @@ impl VulkanContext<'_> {
         Ok(required_extensions)
     }
 
+    #[allow(unused)]
     fn display_extensions(extensions: &Vec<*const i8>) {
         debug!("Extensions:");
         for extension in extensions {
@@ -91,6 +92,7 @@ impl VulkanContext<'_> {
         }
     }
 
+    #[allow(unused)]
     fn display_layers(layers: &Vec<*const i8>) {
         debug!("Layers:");
         for layer in layers {

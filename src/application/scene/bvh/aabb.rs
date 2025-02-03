@@ -74,6 +74,11 @@ impl Aabb {
         }
     }
 
+    pub fn get_volume(&self) -> f32 {
+        let diffs = self.maxs - self.mins;
+        diffs.x * diffs.y * diffs.z
+    }
+
     pub fn get_surface_area(&self) -> f32 {
         let diffs = self.maxs - self.mins;
         2. * (diffs.x * diffs.y + diffs.y * diffs.z + diffs.z * diffs.x)
@@ -123,6 +128,65 @@ impl Aabb {
             },
             padding_2: 0.,
         }
+    }
+
+    // Compute the intersection of two AABBs
+    pub fn intersection(&self, other: &Self) -> Option<Self> {
+        let min_x = self.mins.x.max(other.mins.x);
+        let min_y = self.mins.y.max(other.mins.y);
+        let min_z = self.mins.z.max(other.mins.z);
+
+        let max_x = self.maxs.x.min(other.maxs.x);
+        let max_y = self.maxs.y.min(other.maxs.y);
+        let max_z = self.maxs.z.min(other.maxs.z);
+
+        // Check if there is a valid intersection
+        if min_x <= max_x && min_y <= max_y && min_z <= max_z {
+            Some(Self {
+                mins: glam::Vec3 {
+                    x: min_x,
+                    y: min_y,
+                    z: min_z,
+                },
+                padding_1: 0.,
+                maxs: glam::Vec3 {
+                    x: max_x,
+                    y: max_y,
+                    z: max_z,
+                },
+                padding_2: 0.,
+            })
+        } else {
+            None
+        }
+    }
+
+    // Calculate the volume of the union of two AABBs
+    pub fn get_union_volume(a: &Self, b: &Self) -> f32 {
+        let volume_a = a.get_volume();
+        let volume_b = b.get_volume();
+
+        // Compute the intersection volume (if any)
+        let intersection_volume = match a.intersection(b) {
+            Some(intersection) => intersection.get_volume(),
+            None => 0.0,
+        };
+
+        // Apply the inclusion-exclusion principle
+        volume_a + volume_b - intersection_volume
+    }
+
+    pub fn from_points(points: &Vec<glam::Vec3>) -> Self {
+        let mut aabb = Aabb::default();
+        for point in points {
+            aabb.mins.x = f32::min(aabb.mins.x, point.x);
+            aabb.mins.y = f32::min(aabb.mins.y, point.y);
+            aabb.mins.z = f32::min(aabb.mins.z, point.z);
+            aabb.maxs.x = f32::max(aabb.maxs.x, point.x);
+            aabb.maxs.y = f32::max(aabb.maxs.y, point.y);
+            aabb.maxs.z = f32::max(aabb.maxs.z, point.z);
+        }
+        aabb
     }
 
     pub fn from_triangle(triangle: &Triangle, model_matrix: glam::Mat4) -> Self {
