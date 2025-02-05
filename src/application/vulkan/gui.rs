@@ -245,10 +245,10 @@ impl VulkanContext<'_> {
                 );
                 end.end();
 
-                let disabled = !scene.bvhs.contains_key(&BvhType::BottomUpSah);
-                let end = ui.begin_disabled(disabled);
-                ui.radio_button("Bottom Up Sah", &mut scene.bvh_type, BvhType::BottomUpSah);
-                end.end();
+                // let disabled = !scene.bvhs.contains_key(&BvhType::BottomUpSah);
+                // let end = ui.begin_disabled(disabled);
+                // ui.radio_button("Bottom Up Sah", &mut scene.bvh_type, BvhType::BottomUpSah);
+                // end.end();
 
                 let disabled = !scene.bvhs.contains_key(&BvhType::TopDownSah);
                 let end = ui.begin_disabled(disabled);

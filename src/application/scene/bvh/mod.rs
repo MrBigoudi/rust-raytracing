@@ -6,7 +6,7 @@ use crate::application::core::error::ErrorCode;
 use super::{model::Model, triangle::Triangle, Scene};
 
 pub mod aabb;
-pub mod bottom_up_sah;
+// pub mod bottom_up_sah;
 pub mod default_bottom_up;
 pub mod default_top_down;
 pub mod ploc;
@@ -19,7 +19,7 @@ pub enum BvhType {
     None = 0,
     DefaultTopDown = 1,
     DefaultBottomUp = 2,
-    BottomUpSah = 3,
+    // BottomUpSah = 3,
     TopDownSah = 4,
     Ploc = 5,
     PlocParallel = 6,
@@ -85,6 +85,7 @@ impl BvhNode {
         }
     }
 
+    #[allow(unused)]
     pub fn get_sah_cost(
         &self,
         bvh: &Vec<BvhNode>,

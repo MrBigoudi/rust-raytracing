@@ -5,7 +5,7 @@ use std::{
 };
 
 use bvh::{
-    aabb::Aabb, bottom_up_sah::BvhBottomUpSah, default_top_down::BvhDefaultTopDown, ploc::BvhPloc,
+    aabb::Aabb, default_top_down::BvhDefaultTopDown, ploc::BvhPloc,
     ploc_parallel::BvhPlocParallel, top_down_sah::BvhTopDownSah, Bvh, BvhNode, BvhType,
 };
 use camera::{Camera, CameraMovement};
@@ -371,10 +371,10 @@ impl Scene {
         };
 
         // TODO: uncomment to select the scene
-        // let mut scene = Self::from_scene_type(parameters, single_sphere)?;
+        let mut scene = Self::from_scene_type(parameters, single_sphere)?;
         // let mut scene = Self::from_scene_type(parameters, single_obj)?;
         // let mut scene = Self::from_scene_type(parameters, multi_objs)?;
-        let mut scene = Self::from_scene_type(parameters, multi_spheres)?;
+        // let mut scene = Self::from_scene_type(parameters, multi_spheres)?;
 
         // TODO: uncomment to select the bvh type to build
         let bvhs_to_build = [
@@ -497,20 +497,20 @@ impl Scene {
                     }
                 }
             }
-            BvhType::BottomUpSah => {
-                let start = Instant::now();
-                match BvhBottomUpSah::build(self) {
-                    Ok(new_bvh) => {
-                        let end = Instant::now();
-                        let _ = self.bvhs.insert(BvhType::BottomUpSah, new_bvh);
-                        Ok(end - start)
-                    }
-                    Err(err) => {
-                        error!("Failed to build the bottom up sah bvh: {:?}", err);
-                        Err(ErrorCode::Unknown)
-                    }
-                }
-            }
+            // BvhType::BottomUpSah => {
+            //     let start = Instant::now();
+            //     match BvhBottomUpSah::build(self) {
+            //         Ok(new_bvh) => {
+            //             let end = Instant::now();
+            //             let _ = self.bvhs.insert(BvhType::BottomUpSah, new_bvh);
+            //             Ok(end - start)
+            //         }
+            //         Err(err) => {
+            //             error!("Failed to build the bottom up sah bvh: {:?}", err);
+            //             Err(ErrorCode::Unknown)
+            //         }
+            //     }
+            // }
             BvhType::DefaultTopDown => {
                 let start = Instant::now();
                 match BvhDefaultTopDown::build(self) {
