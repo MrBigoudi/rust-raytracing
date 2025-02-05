@@ -15,7 +15,7 @@ To run in debug mode:
 ```sh
 RUST_LOG=debug cargo run
 ```
-A file $output.log$ will be created with all the debug outcomes that occured during runtime.
+A file `output.log` will be created with all the debug outcomes that occured during runtime.
 
 To build and run in release mode:
 ```sh
@@ -30,3 +30,7 @@ The shaders are automatically built using the `build.rs` script. The shaders ins
 ### Scene
 
 To change the scene, you can update the function `Scene::init` in `src/application/scene/mod.rs`.
+
+## Results
+
+![Results](video.gif)

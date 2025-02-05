@@ -371,18 +371,18 @@ impl Scene {
         };
 
         // TODO: uncomment to select the scene
-        let mut scene = Self::from_scene_type(parameters, single_sphere)?;
+        // let mut scene = Self::from_scene_type(parameters, single_sphere)?;
         // let mut scene = Self::from_scene_type(parameters, single_obj)?;
-        // let mut scene = Self::from_scene_type(parameters, multi_objs)?;
+        let mut scene = Self::from_scene_type(parameters, multi_objs)?;
         // let mut scene = Self::from_scene_type(parameters, multi_spheres)?;
 
         // TODO: uncomment to select the bvh type to build
         let bvhs_to_build = [
-            BvhType::DefaultTopDown,
-            BvhType::TopDownSah,
-            BvhType::DefaultBottomUp,
+            // BvhType::DefaultTopDown,
+            // BvhType::TopDownSah,
+            // BvhType::DefaultBottomUp,
             // BvhType::BottomUpSah,
-            BvhType::Ploc,
+            // BvhType::Ploc,
             BvhType::PlocParallel,
         ];
 
