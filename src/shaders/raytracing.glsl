@@ -364,7 +364,7 @@ int ray_bvh_intersection_0(Ray_0 ray_0, BvhNode_0 bvh_node_0)
 
     vec3 hit_point_0 = _S12 + _S11 * t_min_2;
     float _S19 = hit_point_0.x;
-    if(abs(_S19 - bvh_node_0.bounding_box_0.mins_0.x) < 0.05000000074505806)
+    if(abs(_S19 - bvh_node_0.bounding_box_0.mins_0.x) < 0.20000000298023224)
     {
 
 #line 150
@@ -376,7 +376,7 @@ int ray_bvh_intersection_0(Ray_0 ray_0, BvhNode_0 bvh_node_0)
     {
 
 #line 150
-        close_to_x_0 = abs(_S19 - bvh_node_0.bounding_box_0.maxs_0.x) < 0.05000000074505806;
+        close_to_x_0 = abs(_S19 - bvh_node_0.bounding_box_0.maxs_0.x) < 0.20000000298023224;
 
 #line 150
     }
@@ -384,7 +384,7 @@ int ray_bvh_intersection_0(Ray_0 ray_0, BvhNode_0 bvh_node_0)
 
 #line 151
     bool close_to_y_0;
-    if(abs(_S20 - bvh_node_0.bounding_box_0.mins_0.y) < 0.05000000074505806)
+    if(abs(_S20 - bvh_node_0.bounding_box_0.mins_0.y) < 0.20000000298023224)
     {
 
 #line 152
@@ -396,7 +396,7 @@ int ray_bvh_intersection_0(Ray_0 ray_0, BvhNode_0 bvh_node_0)
     {
 
 #line 152
-        close_to_y_0 = abs(_S20 - bvh_node_0.bounding_box_0.maxs_0.y) < 0.05000000074505806;
+        close_to_y_0 = abs(_S20 - bvh_node_0.bounding_box_0.maxs_0.y) < 0.20000000298023224;
 
 #line 152
     }
@@ -404,7 +404,7 @@ int ray_bvh_intersection_0(Ray_0 ray_0, BvhNode_0 bvh_node_0)
 
 #line 153
     bool close_to_z_0;
-    if(abs(_S21 - bvh_node_0.bounding_box_0.mins_0.z) < 0.05000000074505806)
+    if(abs(_S21 - bvh_node_0.bounding_box_0.mins_0.z) < 0.20000000298023224)
     {
 
 #line 154
@@ -416,7 +416,7 @@ int ray_bvh_intersection_0(Ray_0 ray_0, BvhNode_0 bvh_node_0)
     {
 
 #line 154
-        close_to_z_0 = abs(_S21 - bvh_node_0.bounding_box_0.maxs_0.z) < 0.05000000074505806;
+        close_to_z_0 = abs(_S21 - bvh_node_0.bounding_box_0.maxs_0.z) < 0.20000000298023224;
 
 #line 154
     }
@@ -912,25 +912,25 @@ void get_closest_hit_bvh_0(Ray_0 _S53, inout Hit_0 _S54, inout vec4 _S55, bool _
 {
 
 #line 195
-    uint  stack_0[64];
+    uint  stack_0[32];
 
 
 
     stack_0[0U] = 0U;
 
 #line 196
-    uint  depth_stack_0[64];
+    uint  depth_stack_0[32];
 
 
 
     depth_stack_0[0U] = 0U;
 
 #line 216
-    const vec4 bvh_color_0 = vec4(0.5, 0.0, 0.5, 0.10000000149011612);
+    const vec4 bvh_color_0 = vec4(0.0, 0.80000001192092896, 0.0, 0.80000001192092896);
 
 
 
-    const vec4 bvh_edge_color_0 = vec4(0.69999998807907104, 0.0, 0.69999998807907104, 0.10000000149011612);
+    const vec4 bvh_edge_color_0 = vec4(0.0, 1.0, 0.0, 0.80000001192092896);
 
 #line 220
     uint stack_index_0 = 1U;
@@ -1440,7 +1440,7 @@ void main()
 
 
 
-    float sun_angle_xz_0 = _PushConstants_0.current_time_0 * 0.00100000004749745;
+    float sun_angle_xz_0 = _PushConstants_0.current_time_0 * 0.00009999999747379;
 
 
     vec3 _S108 = normalize(vec3(cos(sun_angle_xz_0), 0.0, sin(sun_angle_xz_0)));
@@ -1449,18 +1449,19 @@ void main()
     sun_0.direction_1 = _S108;
 
 #line 139
-    const vec4 _S109 = vec4(0.0);
+    float factor_0 = 0.5 * pixel_position_0.y + 1.0;
+    vec4 _S109 = vec4(1.0 - factor_0) + factor_0 * vec4(0.5, 0.69999998807907104, 1.0, 1.0);
 
-#line 139
+#line 140
     vec4 color_1 = _S109;
 
     get_color_0(sun_0, _PushConstants_0.bvh_type_0, _PushConstants_0.nb_triangles_0, closest_hit_1, color_1, _PushConstants_0.is_wireframe_on_0 != 0U);
 
-#line 155
+#line 156
     float _S110 = bvh_color_1.w;
     vec4 _S111 = _S110 * bvh_color_1 + (1.0 - _S110) * color_1;
 
-#line 156
+#line 157
     color_1 = _S111;
     color_1[3] = 1.0;
 

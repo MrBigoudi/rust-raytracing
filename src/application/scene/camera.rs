@@ -63,7 +63,7 @@ impl Camera {
             aspect_ratio,
             near,
             movement_acceleration: 5.,
-            movement_speed: 20.,
+            movement_speed: 100.,
             mouse_sensitivity: 0.1,
             yaw: -90.,
             pitch: 0.,

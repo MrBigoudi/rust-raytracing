@@ -144,7 +144,7 @@ public func ray_bvh_intersection(ray: Ray, bvh_node: BvhNode) -> BvhNodeIntersec
     }
 
     // Check if border
-    float threshold = 0.05;
+    float threshold = 0.2;
     float3 hit_point = ray.origin.xyz + ray.direction.xyz * t_min;
     bool close_to_x = (abs(hit_point.x - bvh_node.bounding_box.mins.x) < threshold)
             || (abs(hit_point.x - bvh_node.bounding_box.maxs.x) < threshold);
@@ -191,7 +191,7 @@ public func get_closest_hit_bvh(
     // Create a stack for the node indices
     // At most, the stack size is the number of entries in the bvh
     // const uint STACK_SIZE = 2*nb_triangles - 1;
-    const uint STACK_SIZE = 64;
+    const uint STACK_SIZE = 32;
     uint stack[STACK_SIZE];
     uint depth_stack[STACK_SIZE];
     uint stack_index = 0;
@@ -213,11 +213,11 @@ public func get_closest_hit_bvh(
             if (should_display_bvh && (bvh_depth_to_display == current_depth)) {
                 switch(intersection_type){
                     case BvhNodeIntersection::NotEdge:
-                        float4 bvh_color = float4(0.5f, 0.f, 0.5f, 0.1f);
+                        float4 bvh_color = float4(0.f, 0.8f, 0.f, 0.8f);
                         color = bvh_color;
                         break;
                     case BvhNodeIntersection::Edge:
-                        float4 bvh_edge_color = float4(0.7f, 0.f, 0.7f, 0.1f);
+                        float4 bvh_edge_color = float4(0.f, 1.f, 0.f, 0.8f);
                         color = bvh_edge_color;
                         break;
                     default:

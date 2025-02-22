@@ -125,7 +125,7 @@ void main(uint3 thread_id: SV_DispatchThreadID) {
     // Adjust light direction
     DirectionalLight sun;
     // Orbit arround center
-    float sun_speed_xz = 0.001f;
+    float sun_speed_xz = 0.0001f;
     float sun_speed_y = sun_speed_xz / 3.f;
     float sun_angle_xz = _PushConstants.current_time * sun_speed_xz;
     float sun_angle_y = _PushConstants.current_time * sun_speed_y;
@@ -135,8 +135,9 @@ void main(uint3 thread_id: SV_DispatchThreadID) {
         0.f, 
         sin(sun_angle_xz)
     ));
-    
-    float4 color = float4(0.);
+
+    float factor = 0.5f * pixel_position.y + 1.f;
+    float4 color = (1.f - factor) * float4(1.f, 1.f, 1.f, 1.f) + factor * float4(0.5f, 0.7f, 1.f, 1.f);
     
     get_color(
         sun, 
