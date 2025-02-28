@@ -111,13 +111,16 @@ void main(uint3 thread_id: SV_DispatchThreadID) {
     // Ray ray = get_ray(pixel_position, Camera());
 
     float4 bvh_color = float4(0.f, 0.f, 0.f, 0.f);
-    Hit closest_hit;
-    closest_hit.did_hit = 0;
+    Hit[8] closests_hit = {};
+    for (uint i = 0; i < 8; i++) {
+        closests_hit[i] = Hit();
+    }
+    
     if (_PushConstants.bvh_type == BvhType::None) {
-        get_closest_hit(ray, _PushConstants.nb_triangles, closest_hit, _Triangles, _Models, float.maxValue);
+        get_closests_hit(ray, _PushConstants.nb_triangles, closests_hit, _Triangles, _Models, float.maxValue);
     } else {
         bool should_display_bvh = (_PushConstants.should_display_bvh != 0);
-        get_closest_hit_bvh(_Bvhs, ray, closest_hit, _Triangles, _Models,
+        get_closests_hit_bvh(_Bvhs, ray, closests_hit, _Triangles, _Models,
             bvh_color, should_display_bvh, _PushConstants.bvh_depth_to_display,
             float.maxValue
         );
@@ -145,11 +148,11 @@ void main(uint3 thread_id: SV_DispatchThreadID) {
 
     get_color(
         // sun,
-        point_light, 
+        point_light,
         _Bvhs,
         _PushConstants.bvh_type,
         _PushConstants.nb_triangles,
-        closest_hit,
+        closests_hit,
         color,
         _Triangles, 
         _Models, 

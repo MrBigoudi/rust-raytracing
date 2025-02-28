@@ -5,8 +5,14 @@ import scene.scene;
 
 public struct Hit {
     public float4 coords; // (b0, b1, b2, t)
-    public uint did_hit;
-    public uint triangle_index;
+    public uint did_hit = 0;
+    public uint triangle_index = 0;
+
+    public __init() {
+        did_hit = 0;
+        triangle_index = 0;
+        coords = float4(0.);
+    }
 
     public func get_distance()->float {
         return coords.w;
@@ -158,22 +164,39 @@ public func ray_bvh_intersection(ray: Ray, bvh_node: BvhNode) -> BvhNodeIntersec
     return BvhNodeIntersection::NotEdge;
 }
 
-public func get_closest_hit(
+func update_closests_hits(nb_hits: uint, new_hit: Hit, inout closests_hit: Hit[8])->bool {
+    uint index = 0;
+    let new_dist = new_hit.get_distance();
+
+    while (index < min(8, nb_hits) && closests_hit[index].get_distance() < new_dist) {
+        index++;
+    }
+    if (index < 8) {
+        for (uint i = 8 - 2; i > index; i--) {
+            closests_hit[i + 1] = closests_hit[i];
+        }
+        closests_hit[index] = new_hit;
+        return true;
+    }
+    return false;
+}
+
+public func get_closests_hit(
     ray: Ray,
     nb_triangles: uint,
-    inout closest_hit: Hit,
+    inout closests_hit: Hit[8],
     triangles: RWStructuredBuffer<Triangle>,
     models: RWStructuredBuffer<Model>,
     max_dist: float, 
     ) {
-    let cur_min_dist = 0.;
+    uint nb_hits = 0;
     for(uint i=0; i<nb_triangles; i++){
         Hit cur_hit = ray_triangle_intersection(ray, i, triangles, models);
         if (cur_hit.did_hit == 0) continue;
         let cur_dist = cur_hit.get_distance();
         if (cur_dist > max_dist) continue;
-        if(closest_hit.did_hit == 0 || cur_dist < cur_min_dist){
-            closest_hit = cur_hit;
+        if(update_closests_hits(nb_hits, cur_hit, closests_hit)){
+            nb_hits++;
             if (ray.is_shadow_ray) {
                 return;
             }
@@ -181,10 +204,10 @@ public func get_closest_hit(
     }
 }
 
-public func get_closest_hit_bvh(
+public func get_closests_hit_bvh(
     bvh: RWStructuredBuffer<BvhNode>,
     ray: Ray,
-    inout closest_hit: Hit,
+    inout closests_hit: Hit[8],
     triangles: RWStructuredBuffer<Triangle>,
     models: RWStructuredBuffer<Model>,
     inout color: float4,
@@ -192,8 +215,8 @@ public func get_closest_hit_bvh(
     bvh_depth_to_display: uint,
     max_dist: float, 
     ) {
-    let cur_min_dist = 0.;
-    
+    uint nb_hits = 0;
+
     // Create a stack for the node indices
     // At most, the stack size is the number of entries in the bvh
     // const uint STACK_SIZE = 2*nb_triangles - 1;
@@ -237,8 +260,8 @@ public func get_closest_hit_bvh(
                 if (cur_hit.did_hit == 0) continue;
                 let cur_dist = cur_hit.get_distance();
                 if (cur_dist > max_dist) continue;
-                if (closest_hit.did_hit == 0 || cur_dist < cur_min_dist) {
-                    closest_hit = cur_hit;
+                if (update_closests_hits(nb_hits, cur_hit, closests_hit)) {
+                    nb_hits++;
                     if (ray.is_shadow_ray) {
                         return;
                     }
@@ -262,18 +285,18 @@ public func get_color(
     bvh: RWStructuredBuffer<BvhNode>,
     bvh_type: uint,
     nb_triangles: uint,
-    hit: Hit,
+    Hit[8] closests_hit,
     inout color: float4,
     triangles: RWStructuredBuffer<Triangle>,
     models: RWStructuredBuffer<Model>,
     materials: RWStructuredBuffer<Material>,
     is_wireframe_on: bool,
-    ){
-    if(hit.did_hit == 0) return;
+    ) {
+    if (closests_hit[0].did_hit == 0) return;
 
     let color_tmp = Lights.shade(
         light,
-        hit,
+        closests_hit,
         BRDF::Lambert,
         triangles,
         models,
@@ -289,9 +312,9 @@ public func get_color(
         // Check distance to edges
         float wireframe_edges_width = 0.02;
         float4 wireframe_edges_color = float4(0.f, 0.f, 0.f, 1.f);
-            if (hit.coords.x < wireframe_edges_width
-            || hit.coords.y < wireframe_edges_width
-            || hit.coords.z < wireframe_edges_width) {
+        if (closests_hit[0].coords.x < wireframe_edges_width
+            || closests_hit[0].coords.y < wireframe_edges_width
+            || closests_hit[0].coords.z < wireframe_edges_width) {
             color = wireframe_edges_color;
         }
     }

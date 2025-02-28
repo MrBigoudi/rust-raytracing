@@ -8,7 +8,7 @@ public enum BRDF {
 public struct Lights {
     static public func shade(
         light: Light,
-        incoming_hit: Hit,
+        closests_hit: Hit[8],
         brdf_type: BRDF,
         triangles: RWStructuredBuffer<Triangle>,
         models: RWStructuredBuffer<Model>,
@@ -17,29 +17,31 @@ public struct Lights {
         bvh_type: uint,
         nb_triangles: uint,
     ) ->float3 {
+        let closest_hit = closests_hit[0];
         switch (brdf_type) {
-            case BRDF.Lambert:
-                let hit_position = incoming_hit.get_world_position(triangles, models);
+        case BRDF.Lambert:
+            let hit_position = closest_hit.get_world_position(triangles, models);
                 let max_dist = light.get_max_distance(hit_position);
 
                 Ray shadow_ray;
                 shadow_ray.origin = float4(hit_position, 1.);
                 shadow_ray.direction = float4(light.get_direction(hit_position), 0.);
                 shadow_ray.is_shadow_ray = true;
-                Hit closest_hit;
-                closest_hit.did_hit = 0;
+
+                Hit[8] closests_hit;
+                closests_hit[0].did_hit = 0;
                 
                 // Shadow rays
                 if (bvh_type == BvhType::None) {
-                    get_closest_hit(shadow_ray, nb_triangles, closest_hit, triangles, models, max_dist);
+                    get_closests_hit(shadow_ray, nb_triangles, closests_hit, triangles, models, max_dist);
                 } else {
                     float4 bvh_color_dummy = float4(0.);
-                    get_closest_hit_bvh(bvh, shadow_ray, closest_hit, triangles, models, bvh_color_dummy, false, 0, max_dist);
+                    get_closests_hit_bvh(bvh, shadow_ray, closests_hit, triangles, models, bvh_color_dummy, false, 0, max_dist);
                 }
-                if (closest_hit.did_hit == 0) { // Not in shadow
-                    let hit_normal = incoming_hit.get_world_norm(triangles, models);
+                if (closests_hit[0].did_hit == 0) { // Not in shadow
+                    let hit_normal = closest_hit.get_world_norm(triangles, models);
                     let diffuse_factor = clamp(dot(hit_normal, shadow_ray.direction.xyz), 0., 1.);
-                    return diffuse_factor * light.get_intensity() * light.get_color() * incoming_hit.get_ambient(triangles, models, materials);
+                    return diffuse_factor * light.get_intensity() * light.get_color() * closest_hit.get_ambient(triangles, models, materials);
                 } else { // In shadow
                     return float3(0., 0., 0.);
                 }
