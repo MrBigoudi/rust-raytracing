@@ -5,7 +5,20 @@ use log::{error, info};
 
 use crate::application::core::error::ErrorCode;
 
-use super::{material::Material, triangle::Triangle};
+use super::{
+    material::Material,
+    triangle::{Orientation, Triangle},
+};
+
+#[allow(unused)]
+pub enum PlaneType {
+    Left,
+    Front,
+    Back,
+    Right,
+    Top,
+    Bottom,
+}
 
 #[derive(Clone, Copy, Debug)]
 #[repr(C)]
@@ -392,5 +405,128 @@ impl Model {
         );
 
         Ok(())
+    }
+
+    #[allow(unused)]
+    pub fn add_plane(
+        plane_type: &PlaneType,
+        orientation: &Orientation,
+        material: Option<Material>,
+        in_out_triangles: &mut Vec<Triangle>,
+        in_out_models: &mut Vec<Model>,
+        in_out_materials: &mut Vec<Material>,
+    ) {
+        let vertices = match (plane_type) {
+            PlaneType::Left => Self::create_left_plane(),
+            PlaneType::Front => Self::create_front_plane(),
+            PlaneType::Back => Self::create_back_plane(),
+            PlaneType::Right => Self::create_right_plane(),
+            PlaneType::Top => Self::create_top_plane(),
+            PlaneType::Bottom => Self::create_bottom_plane(),
+        };
+
+        let indices = match orientation {
+            Orientation::ClockWise => {
+                vec![(0, 1, 2), (0, 2, 3)]
+            }
+            Orientation::CounterClockWise => {
+                vec![(0, 2, 1), (0, 3, 2)]
+            }
+        };
+
+        // Build the material
+        let material_index = if material.is_some() {
+            in_out_materials.len()
+        } else {
+            0
+        };
+        if let Some(material) = material {
+            in_out_materials.push(material);
+        }
+        let model = Model {
+            model_matrix: glam::Mat4::IDENTITY,
+            material_index,
+        };
+
+        // Build the triangles
+        let model_index = in_out_models.len();
+        for index in indices {
+            let x = index.0 as usize;
+            let y = index.1 as usize;
+            let z = index.2 as usize;
+            let p0 = glam::Vec4::new(vertices[x].x, vertices[x].y, vertices[x].z, 1.);
+            let p1 = glam::Vec4::new(vertices[y].x, vertices[y].y, vertices[y].z, 1.);
+            let p2 = glam::Vec4::new(vertices[z].x, vertices[z].y, vertices[z].z, 1.);
+
+            let triangle = Triangle {
+                p0,
+                p1,
+                p2,
+                model_index,
+            };
+
+            in_out_triangles.push(triangle);
+        }
+
+        in_out_models.push(model);
+
+        info!(
+            "Number of triangles after adding a new plane: {}",
+            in_out_triangles.len()
+        );
+    }
+
+    fn create_front_plane() -> Vec<glam::Vec3> {
+        vec![
+            glam::Vec3::new(-1.0, -1.0, -1.0), // 1 - Left Bottom Front
+            glam::Vec3::new(-1.0, 1.0, -1.0),  // 2 - Left Top Front
+            glam::Vec3::new(1.0, 1.0, -1.0),   // 3 - Top Right Front
+            glam::Vec3::new(1.0, -1.0, -1.0),  // 4 - Right Bottom Front
+        ]
+    }
+
+    fn create_back_plane() -> Vec<glam::Vec3> {
+        vec![
+            glam::Vec3::new(-1.0, -1.0, 1.0), // 5 - Left Bottom Back
+            glam::Vec3::new(-1.0, 1.0, 1.0),  // 6 - Left Top Back
+            glam::Vec3::new(1.0, 1.0, 1.0),   // 7 - Right Top Back
+            glam::Vec3::new(1.0, -1.0, 1.0),  // 8 - Right Bottom Back
+        ]
+    }
+
+    fn create_left_plane() -> Vec<glam::Vec3> {
+        vec![
+            glam::Vec3::new(-1.0, -1.0, 1.0),  // 1 - Left Bottom Front
+            glam::Vec3::new(-1.0, -1.0, -1.0), // 5 - Left Bottom Back
+            glam::Vec3::new(-1.0, 1.0, -1.0),  // 6 - Left Top Back
+            glam::Vec3::new(-1.0, 1.0, 1.0),   // 2 - Left Top Front
+        ]
+    }
+
+    fn create_right_plane() -> Vec<glam::Vec3> {
+        vec![
+            glam::Vec3::new(1.0, -1.0, 1.0),  // 4 - Right Bottom Front
+            glam::Vec3::new(1.0, 1.0, 1.0),   // 3 - Top Right Front
+            glam::Vec3::new(1.0, 1.0, -1.0),  // 7 - Right Top Back
+            glam::Vec3::new(1.0, -1.0, -1.0), // 8 - Right Bottom Back
+        ]
+    }
+
+    fn create_top_plane() -> Vec<glam::Vec3> {
+        vec![
+            glam::Vec3::new(-1.0, 1.0, 1.0),  // 2 - Left Top Front
+            glam::Vec3::new(-1.0, 1.0, -1.0), // 6 - Left Top Back
+            glam::Vec3::new(1.0, 1.0, -1.0),  // 7 - Right Top Back
+            glam::Vec3::new(1.0, 1.0, 1.0),   // 3 - Top Right Front
+        ]
+    }
+
+    fn create_bottom_plane() -> Vec<glam::Vec3> {
+        vec![
+            glam::Vec3::new(-1.0, -1.0, 1.0),  // 1 - Left Bottom Front
+            glam::Vec3::new(1.0, -1.0, 1.0),   // 4 - Right Bottom Front
+            glam::Vec3::new(1.0, -1.0, -1.0),  // 8 - Right Bottom Back
+            glam::Vec3::new(-1.0, -1.0, -1.0), // 5 - Left Bottom Back
+        ]
     }
 }

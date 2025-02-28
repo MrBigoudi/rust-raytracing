@@ -5,15 +5,15 @@ use std::{
 };
 
 use bvh::{
-    aabb::Aabb, default_top_down::BvhDefaultTopDown, ploc::BvhPloc,
-    ploc_parallel::BvhPlocParallel, top_down_sah::BvhTopDownSah, Bvh, BvhNode, BvhType,
+    aabb::Aabb, default_top_down::BvhDefaultTopDown, ploc::BvhPloc, ploc_parallel::BvhPlocParallel,
+    top_down_sah::BvhTopDownSah, Bvh, BvhNode, BvhType,
 };
 use camera::{Camera, CameraMovement};
 use glam::Vec3;
 use log::{error, info, warn};
 // use log::error;
 use material::Material;
-use model::Model;
+use model::{Model, PlaneType};
 use rand::Rng;
 use triangle::Triangle;
 use winit::{
@@ -68,11 +68,13 @@ pub struct Scene {
 
 pub enum SceneType {
     #[allow(unused)]
+    CornellBox,
+    #[allow(unused)]
     SingleSphere(u32, glam::Vec3, f32, glam::Vec3), // (resolution, position, radius, color)
     #[allow(unused)]
     MultipleSphere(u16, u32, f32, f32, f32, f32), // (nb_spheres, resolution, min_position, max_position, min_radius, max_radius)
     #[allow(unused)]
-    MultipleObj(Vec<(PathBuf, glam::Mat4)>),      // ((path to the obj file, model_matrix))
+    MultipleObj(Vec<(PathBuf, glam::Mat4)>), // ((path to the obj file, model_matrix))
 }
 
 impl Scene {
@@ -123,21 +125,11 @@ impl Scene {
         })
     }
 
-    fn init_camera(
-        parameters: &ApplicationParameters,
-        position: Vec3,
-        speed: f32,
-    ) -> Camera {
+    fn init_camera(parameters: &ApplicationParameters, position: Vec3, speed: f32) -> Camera {
         let width = parameters.window_width as f32;
         let height = parameters.window_height as f32;
         let aspect_ratio = width / height;
-        let mut camera = Camera::new(
-            position,
-            aspect_ratio,
-            50.,
-            0.1,
-            Vec3::new(0., 1., 0.),
-        );
+        let mut camera = Camera::new(position, aspect_ratio, 50., 0.1, Vec3::new(0., 1., 0.));
         camera.movement_speed = speed;
         camera
     }
@@ -240,10 +232,41 @@ impl Scene {
         Self::init_scene_skeleton(triangles, models, materials, camera)
     }
 
-    fn from_scene_type(
-        scene_type: SceneType,
-        camera: Camera,
-    ) -> Result<Scene, ErrorCode> {
+    fn init_scene_cornell_box(camera: Camera) -> Result<Scene, ErrorCode> {
+        let mut triangles = Vec::new();
+        let mut models = Vec::new();
+        let mut materials = vec![Material::default()];
+
+        let orientation = triangle::Orientation::ClockWise;
+        let plane_materials = vec![
+            Material::uniform(&glam::Vec3::X),    // Left
+            Material::uniform(&glam::Vec3::Y),    // Right
+            Material::uniform(&glam::Vec3::ONE),  // Top
+            Material::uniform(&glam::Vec3::ONE),  // Bottom
+            Material::uniform(&glam::Vec3::ONE),  // Back
+        ];
+        let plane_types = vec![
+            PlaneType::Left,
+            PlaneType::Right,
+            PlaneType::Top,
+            PlaneType::Bottom,
+            PlaneType::Back,
+        ];
+        for (material, plane_type) in std::iter::zip(plane_materials, plane_types) {
+            Model::add_plane(
+                &plane_type,
+                &orientation,
+                Some(material),
+                &mut triangles,
+                &mut models,
+                &mut materials,
+            );
+        }
+
+        Self::init_scene_skeleton(triangles, models, materials, camera)
+    }
+
+    fn from_scene_type(scene_type: SceneType, camera: Camera) -> Result<Scene, ErrorCode> {
         match scene_type {
             SceneType::SingleSphere(resolution, position, radius, color) => {
                 Self::init_scene_single_sphere(resolution, position, radius, color, camera)
@@ -262,9 +285,10 @@ impl Scene {
                 max_position,
                 min_radius,
                 max_radius,
-                camera
+                camera,
             ),
             SceneType::MultipleObj(objs) => Self::init_scene_objs(objs, camera),
+            SceneType::CornellBox => Self::init_scene_cornell_box(camera),
         }
     }
 
@@ -300,7 +324,7 @@ impl Scene {
         let mut objs = Vec::new();
         let obj = (path, glam::Mat4::IDENTITY);
         objs.push(obj);
-        SceneType::MultipleObj(objs)   
+        SceneType::MultipleObj(objs)
     }
 
     #[allow(unused)]
@@ -344,8 +368,7 @@ impl Scene {
                 glam::Mat4::from_translation(glam::Vec3::new(x, teapot_height, z));
             let teapot_rotation = glam::Mat4::from_rotation_y(-angle);
             let teapot_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(10.));
-            let teapot_model_matrix =
-                teapot_translation * teapot_rotation * teapot_scale_factor;
+            let teapot_model_matrix = teapot_translation * teapot_rotation * teapot_scale_factor;
             let teapot = (PathBuf::from("teapot.obj"), teapot_model_matrix);
             objs.push(teapot);
         }
@@ -359,27 +382,21 @@ impl Scene {
     }
 
     pub fn init(parameters: &ApplicationParameters) -> Result<Scene, ErrorCode> {
-        let scene_type = Self::init_single_obj(PathBuf::from("cube.obj"));
+        let scene_type = SceneType::CornellBox;
         // let scene_type = Self::init_single_obj(PathBuf::from("armadillo.obj"));
         // let scene_type = Self::init_single_sphere();
 
         // let camera = Self::init_camera(
-        //     parameters, 
-        //     Vec3::new(0., 0., -40.), 
+        //     parameters,
+        //     Vec3::new(0., 0., -40.),
         //     100.
         // );
 
-        let camera = Self::init_camera(
-            parameters, 
-            Vec3::new(0., 0.,-3.), 
-            1.
-        );
+        let camera = Self::init_camera(parameters, Vec3::new(0., 0., -3.), 1.);
 
         let mut scene = Self::from_scene_type(scene_type, camera)?;
         // First is the first one to display
-        let bvhs_to_build = [
-            BvhType::PlocParallel,
-        ];
+        let bvhs_to_build = [BvhType::PlocParallel];
 
         let displayed_bvh_type = if bvhs_to_build.is_empty() {
             BvhType::None

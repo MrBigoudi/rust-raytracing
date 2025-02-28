@@ -2,6 +2,12 @@ use glam::Vec4;
 
 use super::{bvh::aabb::Aabb, model::Model, Scene};
 
+#[allow(unused)]
+pub enum Orientation {
+    ClockWise,
+    CounterClockWise,
+}
+
 #[derive(Clone, Copy, Debug)]
 #[repr(C)]
 pub struct Triangle {

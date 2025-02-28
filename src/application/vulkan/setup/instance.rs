@@ -21,10 +21,11 @@ impl VulkanContext<'_> {
     }
 
     fn get_required_layers(&self) -> Result<Vec<*const i8>, ErrorCode> {
-        let mut required_layers = Vec::new();
+        #[allow(unused)]
+        let required_layers: Vec<*const i8> = Vec::new();
 
         #[cfg(debug_assertions)]
-        required_layers.push(c"VK_LAYER_KHRONOS_validation".as_ptr());
+        let required_layers = vec![c"VK_LAYER_KHRONOS_validation".as_ptr()];
 
         let available_layers = unsafe {
             match self.get_entry()?.enumerate_instance_layer_properties() {
