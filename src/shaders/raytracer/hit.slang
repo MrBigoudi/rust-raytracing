@@ -164,11 +164,15 @@ public func get_closest_hit(
     inout closest_hit: Hit,
     triangles: RWStructuredBuffer<Triangle>,
     models: RWStructuredBuffer<Model>,
-    ){
+    max_dist: float, 
+    ) {
+    let cur_min_dist = 0.;
     for(uint i=0; i<nb_triangles; i++){
         Hit cur_hit = ray_triangle_intersection(ray, i, triangles, models);
-        if(cur_hit.did_hit == 0) continue;
-        if(closest_hit.did_hit == 0 || cur_hit.get_distance() < closest_hit.get_distance()){
+        if (cur_hit.did_hit == 0) continue;
+        let cur_dist = cur_hit.get_distance();
+        if (cur_dist > max_dist) continue;
+        if(closest_hit.did_hit == 0 || cur_dist < cur_min_dist){
             closest_hit = cur_hit;
             if (ray.is_shadow_ray) {
                 return;
@@ -186,8 +190,10 @@ public func get_closest_hit_bvh(
     inout color: float4,
     should_display_bvh: bool,
     bvh_depth_to_display: uint,
+    max_dist: float, 
     ) {
-
+    let cur_min_dist = 0.;
+    
     // Create a stack for the node indices
     // At most, the stack size is the number of entries in the bvh
     // const uint STACK_SIZE = 2*nb_triangles - 1;
@@ -229,7 +235,9 @@ public func get_closest_hit_bvh(
             if (current_node.is_leaf()) {
                 Hit cur_hit = ray_triangle_intersection(ray, current_node.triangle_index, triangles, models);
                 if (cur_hit.did_hit == 0) continue;
-                if (closest_hit.did_hit == 0 || cur_hit.get_distance() < closest_hit.get_distance()) {
+                let cur_dist = cur_hit.get_distance();
+                if (cur_dist > max_dist) continue;
+                if (closest_hit.did_hit == 0 || cur_dist < cur_min_dist) {
                     closest_hit = cur_hit;
                     if (ray.is_shadow_ray) {
                         return;
@@ -250,7 +258,7 @@ public func get_closest_hit_bvh(
 }
 
 public func get_color(
-    light: DirectionalLight,
+    light: Light,
     bvh: RWStructuredBuffer<BvhNode>,
     bvh_type: uint,
     nb_triangles: uint,
@@ -263,7 +271,8 @@ public func get_color(
     ){
     if(hit.did_hit == 0) return;
 
-    let color_tmp = light.shade(
+    let color_tmp = Lights.shade(
+        light,
         hit,
         BRDF::Lambert,
         triangles,

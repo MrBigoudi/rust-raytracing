@@ -114,11 +114,12 @@ void main(uint3 thread_id: SV_DispatchThreadID) {
     Hit closest_hit;
     closest_hit.did_hit = 0;
     if (_PushConstants.bvh_type == BvhType::None) {
-        get_closest_hit(ray, _PushConstants.nb_triangles, closest_hit, _Triangles, _Models);
+        get_closest_hit(ray, _PushConstants.nb_triangles, closest_hit, _Triangles, _Models, float.maxValue);
     } else {
         bool should_display_bvh = (_PushConstants.should_display_bvh != 0);
         get_closest_hit_bvh(_Bvhs, ray, closest_hit, _Triangles, _Models,
-            bvh_color, should_display_bvh, _PushConstants.bvh_depth_to_display
+            bvh_color, should_display_bvh, _PushConstants.bvh_depth_to_display,
+            float.maxValue
         );
     }
 
@@ -131,16 +132,20 @@ void main(uint3 thread_id: SV_DispatchThreadID) {
     float sun_angle_y = _PushConstants.current_time * sun_speed_y;
     // sun.direction = normalize(float3(cos(sun_angle_xz), sin(sun_angle_y), sin(sun_angle_xz)));
     sun.direction = normalize(float3(
-        cos(sun_angle_xz), 
-        0.f, 
+        cos(sun_angle_xz),
+        0.f,
         sin(sun_angle_xz)
     ));
+    PointLight point_light;
+    point_light.intensity = 0.5f;
+    point_light.origin = float3(0., 0., 0.);
 
     float factor = 0.5f * pixel_position.y + 1.f;
     float4 color = (1.f - factor) * float4(1.f, 1.f, 1.f, 1.f) + factor * float4(0.5f, 0.7f, 1.f, 1.f);
-    
+
     get_color(
-        sun, 
+        // sun,
+        point_light, 
         _Bvhs,
         _PushConstants.bvh_type,
         _PushConstants.nb_triangles,

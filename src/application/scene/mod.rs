@@ -67,8 +67,11 @@ pub struct Scene {
 }
 
 pub enum SceneType {
+    #[allow(unused)]
     SingleSphere(u32, glam::Vec3, f32, glam::Vec3), // (resolution, position, radius, color)
+    #[allow(unused)]
     MultipleSphere(u16, u32, f32, f32, f32, f32), // (nb_spheres, resolution, min_position, max_position, min_radius, max_radius)
+    #[allow(unused)]
     MultipleObj(Vec<(PathBuf, glam::Mat4)>),      // ((path to the obj file, model_matrix))
 }
 
@@ -120,25 +123,33 @@ impl Scene {
         })
     }
 
-    // Scene with only one centered sphere
-    fn init_scene_single_sphere(
+    fn init_camera(
         parameters: &ApplicationParameters,
-        sphere_resolution: u32,
-        sphere_position: glam::Vec3,
-        sphere_radius: f32,
-        sphere_color: glam::Vec3,
-    ) -> Result<Scene, ErrorCode> {
+        position: Vec3,
+        speed: f32,
+    ) -> Camera {
         let width = parameters.window_width as f32;
         let height = parameters.window_height as f32;
         let aspect_ratio = width / height;
-        let camera = Camera::new(
-            Vec3::new(0., 0., -40.),
+        let mut camera = Camera::new(
+            position,
             aspect_ratio,
             50.,
             0.1,
             Vec3::new(0., 1., 0.),
         );
+        camera.movement_speed = speed;
+        camera
+    }
 
+    // Scene with only one centered sphere
+    fn init_scene_single_sphere(
+        sphere_resolution: u32,
+        sphere_position: glam::Vec3,
+        sphere_radius: f32,
+        sphere_color: glam::Vec3,
+        camera: Camera,
+    ) -> Result<Scene, ErrorCode> {
         let mut triangles = Vec::new();
         let mut models = Vec::new();
         let mut materials = vec![Material::default()];
@@ -162,20 +173,9 @@ impl Scene {
     }
 
     fn init_scene_objs(
-        parameters: &ApplicationParameters,
         objs: Vec<(PathBuf, glam::Mat4)>,
+        camera: Camera,
     ) -> Result<Scene, ErrorCode> {
-        let width = parameters.window_width as f32;
-        let height = parameters.window_height as f32;
-        let aspect_ratio = width / height;
-        let camera = Camera::new(
-            Vec3::new(0., 0., -400.),
-            aspect_ratio,
-            50.,
-            0.1,
-            Vec3::new(0., 1., 0.),
-        );
-
         let mut triangles = Vec::new();
         let mut models = Vec::new();
         let mut materials = vec![Material::default()];
@@ -201,25 +201,14 @@ impl Scene {
     }
 
     fn init_scene_multi_spheres(
-        parameters: &ApplicationParameters,
         nb_spheres: u16,
         sphere_resolution: u32,
         min_pos: f32,
         max_pos: f32,
         min_radius: f32,
         max_radius: f32,
+        camera: Camera,
     ) -> Result<Scene, ErrorCode> {
-        let width = parameters.window_width as f32;
-        let height = parameters.window_height as f32;
-        let aspect_ratio = width / height;
-        let camera = Camera::new(
-            Vec3::new(0., 0., -40.),
-            aspect_ratio,
-            50.,
-            0.1,
-            Vec3::new(0., 1., 0.),
-        );
-
         let mut triangles = Vec::new();
         let mut models = Vec::new();
         let mut materials = vec![Material::default()];
@@ -252,12 +241,12 @@ impl Scene {
     }
 
     fn from_scene_type(
-        parameters: &ApplicationParameters,
         scene_type: SceneType,
+        camera: Camera,
     ) -> Result<Scene, ErrorCode> {
         match scene_type {
             SceneType::SingleSphere(resolution, position, radius, color) => {
-                Self::init_scene_single_sphere(parameters, resolution, position, radius, color)
+                Self::init_scene_single_sphere(resolution, position, radius, color, camera)
             }
             SceneType::MultipleSphere(
                 nb_spheres,
@@ -267,127 +256,136 @@ impl Scene {
                 min_radius,
                 max_radius,
             ) => Self::init_scene_multi_spheres(
-                parameters,
                 nb_spheres,
                 resolution,
                 min_position,
                 max_position,
                 min_radius,
                 max_radius,
+                camera
             ),
-            SceneType::MultipleObj(objs) => Self::init_scene_objs(parameters, objs),
+            SceneType::MultipleObj(objs) => Self::init_scene_objs(objs, camera),
         }
     }
 
+    #[allow(unused)]
+    fn init_single_sphere() -> SceneType {
+        let resolution = 16;
+        let position = glam::Vec3::ZERO;
+        let radius = 10.;
+        let color = glam::Vec3::new(0.1, 0.5, 0.5);
+        SceneType::SingleSphere(resolution, position, radius, color)
+    }
+
+    #[allow(unused)]
+    fn init_multi_spheres() -> SceneType {
+        let nb_spheres = 100;
+        let resolution = 132;
+        let min_position = -50.;
+        let max_position = 50.;
+        let min_radius = 0.5;
+        let max_radius = 5.;
+        SceneType::MultipleSphere(
+            nb_spheres,
+            resolution,
+            min_position,
+            max_position,
+            min_radius,
+            max_radius,
+        )
+    }
+
+    #[allow(unused)]
+    fn init_single_obj(path: PathBuf) -> SceneType {
+        let mut objs = Vec::new();
+        let obj = (path, glam::Mat4::IDENTITY);
+        objs.push(obj);
+        SceneType::MultipleObj(objs)   
+    }
+
+    #[allow(unused)]
+    fn init_multi_objs() -> SceneType {
+        let mut objs = Vec::new();
+        let armadillo = (PathBuf::from("armadillo.obj"), glam::Mat4::IDENTITY);
+        objs.push(armadillo);
+
+        let num_objects = 10;
+        let radius = 150.;
+
+        for i in 0..num_objects {
+            let angle = (i as f32 / num_objects as f32) * std::f32::consts::TAU;
+            let x = radius * angle.cos();
+            let z = radius * angle.sin();
+
+            // Bunny circle at height 100
+            let bunny_height = 100.0;
+            let bunny_translation =
+                glam::Mat4::from_translation(glam::Vec3::new(x, bunny_height, z));
+            let bunny_rotation = glam::Mat4::from_rotation_y(-angle);
+            let bunny_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(100.));
+            let bunny_model_matrix = bunny_translation * bunny_rotation * bunny_scale_factor;
+            let bunny = (PathBuf::from("stanford-bunny.obj"), bunny_model_matrix);
+            objs.push(bunny);
+
+            // Suzanne circle at height 0
+            let suzanne_height = 0.0;
+            let suzanne_translation =
+                glam::Mat4::from_translation(glam::Vec3::new(x, suzanne_height, z));
+            let suzanne_rotation = glam::Mat4::from_rotation_y(-angle);
+            let suzanne_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(10.));
+            let suzanne_model_matrix =
+                suzanne_translation * suzanne_rotation * suzanne_scale_factor;
+            let suzanne = (PathBuf::from("suzanne.obj"), suzanne_model_matrix);
+            objs.push(suzanne);
+
+            // Teapot circle at height -100
+            let teapot_height = -100.0;
+            let teapot_translation =
+                glam::Mat4::from_translation(glam::Vec3::new(x, teapot_height, z));
+            let teapot_rotation = glam::Mat4::from_rotation_y(-angle);
+            let teapot_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(10.));
+            let teapot_model_matrix =
+                teapot_translation * teapot_rotation * teapot_scale_factor;
+            let teapot = (PathBuf::from("teapot.obj"), teapot_model_matrix);
+            objs.push(teapot);
+        }
+
+        let dragon = (
+            PathBuf::from("xyzrgb_dragon.obj"),
+            glam::Mat4::from_translation(glam::Vec3::new(-50., -100., 0.)),
+        );
+        objs.push(dragon);
+        SceneType::MultipleObj(objs)
+    }
+
     pub fn init(parameters: &ApplicationParameters) -> Result<Scene, ErrorCode> {
-        #[allow(unused)]
-        let single_sphere = {
-            let resolution = 16;
-            let position = glam::Vec3::ZERO;
-            let radius = 10.;
-            let color = glam::Vec3::new(0.1, 0.5, 0.5);
-            SceneType::SingleSphere(resolution, position, radius, color)
-        };
+        let scene_type = Self::init_single_obj(PathBuf::from("cube.obj"));
+        // let scene_type = Self::init_single_obj(PathBuf::from("armadillo.obj"));
+        // let scene_type = Self::init_single_sphere();
 
-        #[allow(unused)]
-        let multi_spheres = {
-            let nb_spheres = 100;
-            let resolution = 132;
-            let min_position = -50.;
-            let max_position = 50.;
-            let min_radius = 0.5;
-            let max_radius = 5.;
-            SceneType::MultipleSphere(
-                nb_spheres,
-                resolution,
-                min_position,
-                max_position,
-                min_radius,
-                max_radius,
-            )
-        };
+        // let camera = Self::init_camera(
+        //     parameters, 
+        //     Vec3::new(0., 0., -40.), 
+        //     100.
+        // );
 
-        #[allow(unused)]
-        let single_obj = {
-            let mut objs = Vec::new();
-            let armadillo = (PathBuf::from("armadillo.obj"), glam::Mat4::IDENTITY);
-            objs.push(armadillo);
-            SceneType::MultipleObj(objs)
-        };
+        let camera = Self::init_camera(
+            parameters, 
+            Vec3::new(0., 0.,-3.), 
+            1.
+        );
 
-        #[allow(unused)]
-        let multi_objs = {
-            let mut objs = Vec::new();
-            let armadillo = (PathBuf::from("armadillo.obj"), glam::Mat4::IDENTITY);
-            objs.push(armadillo);
-
-            let num_objects = 10;
-            let radius = 150.;
-
-            for i in 0..num_objects {
-                let angle = (i as f32 / num_objects as f32) * std::f32::consts::TAU;
-                let x = radius * angle.cos();
-                let z = radius * angle.sin();
-
-                // Bunny circle at height 100
-                let bunny_height = 100.0;
-                let bunny_translation =
-                    glam::Mat4::from_translation(glam::Vec3::new(x, bunny_height, z));
-                let bunny_rotation = glam::Mat4::from_rotation_y(-angle);
-                let bunny_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(100.));
-                let bunny_model_matrix = bunny_translation * bunny_rotation * bunny_scale_factor;
-                let bunny = (PathBuf::from("stanford-bunny.obj"), bunny_model_matrix);
-                objs.push(bunny);
-
-                // Suzanne circle at height 0
-                let suzanne_height = 0.0;
-                let suzanne_translation =
-                    glam::Mat4::from_translation(glam::Vec3::new(x, suzanne_height, z));
-                let suzanne_rotation = glam::Mat4::from_rotation_y(-angle);
-                let suzanne_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(10.));
-                let suzanne_model_matrix =
-                    suzanne_translation * suzanne_rotation * suzanne_scale_factor;
-                let suzanne = (PathBuf::from("suzanne.obj"), suzanne_model_matrix);
-                objs.push(suzanne);
-
-                // Teapot circle at height -100
-                let teapot_height = -100.0;
-                let teapot_translation =
-                    glam::Mat4::from_translation(glam::Vec3::new(x, teapot_height, z));
-                let teapot_rotation = glam::Mat4::from_rotation_y(-angle);
-                let teapot_scale_factor = glam::Mat4::from_scale(glam::Vec3::splat(10.));
-                let teapot_model_matrix =
-                    teapot_translation * teapot_rotation * teapot_scale_factor;
-                let teapot = (PathBuf::from("teapot.obj"), teapot_model_matrix);
-                objs.push(teapot);
-            }
-
-            let dragon = (
-                PathBuf::from("xyzrgb_dragon.obj"),
-                glam::Mat4::from_translation(glam::Vec3::new(-50., -100., 0.)),
-            );
-            objs.push(dragon);
-            SceneType::MultipleObj(objs)
-        };
-
-        // TODO: uncomment to select the scene
-        // let mut scene = Self::from_scene_type(parameters, single_sphere)?;
-        // let mut scene = Self::from_scene_type(parameters, single_obj)?;
-        let mut scene = Self::from_scene_type(parameters, multi_objs)?;
-        // let mut scene = Self::from_scene_type(parameters, multi_spheres)?;
-
-        // TODO: uncomment to select the bvh type to build
+        let mut scene = Self::from_scene_type(scene_type, camera)?;
+        // First is the first one to display
         let bvhs_to_build = [
-            // BvhType::DefaultTopDown,
-            // BvhType::TopDownSah,
-            // BvhType::DefaultBottomUp,
-            // BvhType::BottomUpSah,
-            // BvhType::Ploc,
             BvhType::PlocParallel,
         ];
 
-        // TODO: uncomment to select the bvh type to display initialy
-        let displayed_bvh_type = BvhType::PlocParallel;
+        let displayed_bvh_type = if bvhs_to_build.is_empty() {
+            BvhType::None
+        } else {
+            bvhs_to_build[0]
+        };
 
         scene.bvh_type = displayed_bvh_type;
         scene.bvh_last_type = displayed_bvh_type;

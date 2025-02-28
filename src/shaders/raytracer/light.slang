@@ -2,20 +2,12 @@ implementing raytracer;
 
 public enum BRDF {
     Lambert,
+    GGX,
 }
 
-public struct DirectionalLight {
-    public float3 color;
-    public float intensity;
-    public float3 direction;
-
-    public __init() {
-        color = float3(1., 1., 1.);
-        intensity = 1.;
-        direction = normalize(float3(1., 0., 0.));
-    }
-
-    public func shade(
+public struct Lights {
+    static public func shade(
+        light: Light,
         incoming_hit: Hit,
         brdf_type: BRDF,
         triangles: RWStructuredBuffer<Triangle>,
@@ -28,29 +20,99 @@ public struct DirectionalLight {
         switch (brdf_type) {
             case BRDF.Lambert:
                 let hit_position = incoming_hit.get_world_position(triangles, models);
+                let max_dist = light.get_max_distance(hit_position);
+
                 Ray shadow_ray;
                 shadow_ray.origin = float4(hit_position, 1.);
-                shadow_ray.direction = float4(-direction, 0.);
+                shadow_ray.direction = float4(light.get_direction(hit_position), 0.);
                 shadow_ray.is_shadow_ray = true;
                 Hit closest_hit;
                 closest_hit.did_hit = 0;
+                
                 // Shadow rays
                 if (bvh_type == BvhType::None) {
-                    get_closest_hit(shadow_ray, nb_triangles, closest_hit, triangles, models);
+                    get_closest_hit(shadow_ray, nb_triangles, closest_hit, triangles, models, max_dist);
                 } else {
                     float4 bvh_color_dummy = float4(0.);
-                    get_closest_hit_bvh(bvh, shadow_ray, closest_hit, triangles, models, bvh_color_dummy, false, 0);
+                    get_closest_hit_bvh(bvh, shadow_ray, closest_hit, triangles, models, bvh_color_dummy, false, 0, max_dist);
                 }
                 if (closest_hit.did_hit == 0) { // Not in shadow
                     let hit_normal = incoming_hit.get_world_norm(triangles, models);
-                    let diffuse_factor = clamp(dot(hit_normal, -direction), 0., 1.);
-                    return diffuse_factor * intensity * color * incoming_hit.get_ambient(triangles, models, materials);
+                    let diffuse_factor = clamp(dot(hit_normal, shadow_ray.direction.xyz), 0., 1.);
+                    return diffuse_factor * light.get_intensity() * light.get_color() * incoming_hit.get_ambient(triangles, models, materials);
                 } else { // In shadow
                     return float3(0., 0., 0.);
                 }
+
+            // TODO: GGX brdf
+            case BRDF.GGX:
+                return float3(0.);
+
             default:
-                // TODO: GGX brdf
                 return float3(0.);
         }
+    }
+}
+
+public interface Light {
+    public func get_direction(hit_position: float3)->float3;
+    public func get_max_distance(hit_position: float3)->float;
+    public func get_color() -> float3;
+    public func get_intensity() -> float;
+}
+
+public struct DirectionalLight : Light {
+    public float3 direction;
+    public float3 color;
+    public float intensity;
+
+    public __init() {
+        color = float3(1., 1., 1.);
+        intensity = 1.;
+        direction = normalize(float3(1., 0., 0.));
+    }
+
+    public func get_direction(hit_position: float3) -> float3 {
+        return normalize(-direction);
+    }
+
+    public func get_color() -> float3 {
+        return color;
+    }
+
+    public func get_intensity() -> float {
+        return intensity;
+    }
+
+    public func get_max_distance(hit_position: float3) -> float {
+        return float.maxValue;
+    }
+}
+
+public struct PointLight : Light {
+    public float3 origin;
+    public float3 color;
+    public float intensity;
+
+    public __init() {
+        color = float3(1., 1., 1.);
+        intensity = 1.;
+        origin = float3(0., 0., 0.);
+    }
+
+    public func get_direction(hit_position: float3) -> float3 {
+        return normalize(origin - hit_position);
+    }
+
+    public func get_color() -> float3 {
+        return color;
+    }
+
+    public func get_intensity()->float {
+        return intensity;
+    }
+
+    public func get_max_distance(hit_position: float3)->float {
+        return length(origin-hit_position);
     }
 }
